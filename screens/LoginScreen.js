@@ -7,11 +7,29 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: session, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       Alert.alert('Error', error.message);
+      return;
+    }
+
+    // Merr role nga tabela users
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('email', email)
+      .single();
+
+    if (userError) {
+      Alert.alert('Error', userError.message);
+      return;
+    }
+
+    // Navigo bazuar në role
+    if (userData.role === 'owner') {
+      navigation.reset({ index: 0, routes: [{ name: 'OwnerHome' }] });
     } else {
-      navigation.navigate('Home');
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     }
   };
 
@@ -49,38 +67,11 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   title: { fontSize: 36, fontWeight: 'bold', color: '#1a73e8', marginBottom: 10 },
   subtitle: { fontSize: 16, color: '#555', marginBottom: 30 },
-  input: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#1a73e8',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
+  input: { width: '100%', backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', padding: 12, borderRadius: 10, marginBottom: 15, fontSize: 16 },
+  button: { width: '100%', backgroundColor: '#1a73e8', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   linkText: { color: '#1a73e8', fontSize: 14 },
 });

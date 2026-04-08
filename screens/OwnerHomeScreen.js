@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { supabase } from '../services/supabase';
 
-export default function HomeScreen({ navigation }) {
+export default function OwnerHomeScreen({ navigation }) {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -14,10 +14,17 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome, Client!</Text>
-      <TouchableOpacity style={styles.button} onPress={() => Alert.alert('Browse Apartments')}>
-        <Text style={styles.buttonText}>Browse Apartments</Text>
+      <Text style={styles.title}>Owner Dashboard</Text>
+      <Text style={styles.subtitle}>Manage your apartments and bookings</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => Alert.alert('Add Apartment')}>
+        <Text style={styles.buttonText}>Add Apartment</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={() => Alert.alert('View My Bookings')}>
+        <Text style={styles.buttonText}>View My Bookings</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
@@ -27,7 +34,8 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5', padding: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1a73e8', marginBottom: 30 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1a73e8', marginBottom: 10 },
+  subtitle: { fontSize: 16, color: '#555', marginBottom: 30, textAlign: 'center' },
   button: { backgroundColor: '#1a73e8', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 10, marginBottom: 15 },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   logoutButton: { marginTop: 20, padding: 10 },

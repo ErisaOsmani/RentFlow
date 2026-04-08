@@ -6,6 +6,7 @@ export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('client');
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -13,10 +14,15 @@ export default function SignUpScreen({ navigation }) {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp(
+      { email, password },
+      { data: { role } }
+    );
+
     if (error) {
       Alert.alert('Error', error.message);
     } else {
+      await supabase.from('users').insert([{ email, role }]);
       Alert.alert('Success', 'Account created! Please login.');
       navigation.navigate('Login');
     }
@@ -24,33 +30,20 @@ export default function SignUpScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Sign up to RentFlow</Text>
+      <Text style={styles.title}>Sign Up</Text>
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
+      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={styles.input} />
+      <TextInput placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={styles.input} />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
-
-      <TextInput
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+      <View style={{ flexDirection: 'row', marginBottom: 15 }}>
+        <TouchableOpacity onPress={() => setRole('client')} style={{ marginRight: 20 }}>
+          <Text style={{ color: role === 'client' ? '#1a73e8' : '#555' }}>Client</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setRole('owner')}>
+          <Text style={{ color: role === 'owner' ? '#1a73e8' : '#555' }}>Owner</Text>
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={handleSignUp}>
         <Text style={styles.buttonText}>Sign Up</Text>
@@ -64,34 +57,10 @@ export default function SignUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#1a73e8', marginBottom: 10 },
-  subtitle: { fontSize: 16, color: '#555', marginBottom: 30 },
-  input: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#1a73e8',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 15,
-    elevation: 3,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1a73e8', marginBottom: 20 },
+  input: { width: '100%', backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', padding: 12, borderRadius: 10, marginBottom: 15 },
+  button: { width: '100%', backgroundColor: '#1a73e8', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
+  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   linkText: { color: '#1a73e8', fontSize: 14 },
 });
