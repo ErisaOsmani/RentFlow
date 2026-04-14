@@ -1,35 +1,61 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  SectionList,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 
 export default function HomeScreen({ navigation }) {
-  const [apartments, setApartments] = useState([]);
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      load();
-    }, [])
-  );
-
-  const load = async () => {
+  const loadApartments = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('apartments').select('*');
+      const { data, error } = await supabase
+        .from('apartments')
+        .select('id, title, city, description, image_url, price, rooms')
+        .order('city', { ascending: true })
+        .order('title', { ascending: true });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
-      setApartments(data || []);
+      const grouped = (data || []).reduce((acc, item) => {
+        const city = item.city || 'Pa qytet';
+        const existing = acc.find((section) => section.title === city);
+
+        if (existing) {
+          existing.data.push(item);
+        } else {
+          acc.push({ title: city, data: [item] });
+        }
+
+        return acc;
+      }, []);
+
+      setSections(grouped);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadApartments();
+    }, [loadApartments])
+  );
 
   const handleLogout = () => {
     Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
@@ -65,7 +91,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.heroTop}>
           <View style={styles.heroTextWrap}>
             <Text style={styles.eyebrow}>DISCOVER</Text>
-            <Text style={styles.title}>Explore Apartments</Text>
+            <Text style={styles.title}>Apartments By City</Text>
           </View>
           <TouchableOpacity
             style={[styles.logoutChip, loggingOut && styles.logoutChipDisabled]}
@@ -76,45 +102,40 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>
-          Hapesira moderne, qytete te ndryshme dhe nje eksperience me e rafinuar ne kerkimin tend.
+          Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
         </Text>
-        <Text style={styles.helperText}>Terhiq poshte per refresh te listing-eve.</Text>
       </View>
 
-      <FlatList
-        data={apartments}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => String(item.id)}
+        style={styles.list}
         contentContainerStyle={styles.listContent}
         refreshing={loading}
-        onRefresh={load}
+        onRefresh={loadApartments}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka listing-e ende</Text>}
+            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka banesa ende</Text>}
             <Text style={styles.emptyText}>
-              {loading ? 'Po ngarkohen apartamentet...' : 'Provo perseri me vone ose shto listing-e te reja si owner.'}
+              {loading ? 'Po ngarkohen listing-et...' : 'Owner-at ende nuk kane shtuar banesa.'}
             </Text>
           </View>
         }
+        renderSectionHeader={({ section: { title } }) => (
+          <Text style={styles.cityHeader}>{title}</Text>
+        )}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('Booking', { apartment: item })}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.locationBadge}>
-                <Text style={styles.locationBadgeText}>{item.city}</Text>
+          <View style={styles.card}>
+            {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.cardImage} /> : null}
+            <View style={styles.cardTop}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <View style={styles.priceBadge}>
+                <Text style={styles.priceBadgeText}>${item.price}</Text>
               </View>
-              <Text style={styles.price}>${item.price}</Text>
             </View>
-
-            <Text style={styles.name}>{item.title}</Text>
-            <Text style={styles.meta}>{item.rooms} rooms available</Text>
-
-            <View style={styles.cardFooter}>
-              <Text style={styles.footerHint}>Per night</Text>
-              <Text style={styles.cta}>Reserve</Text>
-            </View>
-          </TouchableOpacity>
+            <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+            <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+          </View>
         )}
       />
     </View>
@@ -159,11 +180,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
-  helperText: {
-    color: '#98A2B3',
-    marginTop: 10,
-    fontWeight: '600',
-  },
   logoutChip: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 999,
@@ -177,12 +193,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  list: {
+    width: '100%',
+  },
   listContent: {
     paddingBottom: 28,
   },
+  cityHeader: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#14213D',
+    marginTop: 4,
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 20,
     padding: 18,
     marginBottom: 14,
     shadowColor: '#12213F',
@@ -191,49 +217,44 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
-  cardHeader: {
+  cardImage: {
+    width: '100%',
+    height: 170,
+    borderRadius: 16,
+    marginBottom: 14,
+    backgroundColor: '#E5E7EB',
+  },
+  cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  locationBadge: {
-    backgroundColor: '#F5F7FB',
+  cardTitle: {
+    flex: 1,
+    color: '#14213D',
+    fontSize: 20,
+    fontWeight: '800',
+    paddingRight: 10,
+  },
+  priceBadge: {
+    backgroundColor: '#FFE9EA',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  locationBadgeText: {
-    color: '#14213D',
-    fontWeight: '700',
-  },
-  price: {
+  priceBadgeText: {
     color: '#FF5A5F',
     fontWeight: '800',
-    fontSize: 18,
   },
-  name: {
-    color: '#14213D',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  meta: {
+  cardDesc: {
     color: '#667085',
-    marginTop: 8,
+    lineHeight: 20,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 18,
-  },
-  footerHint: {
-    color: '#98A2B3',
-    fontWeight: '600',
-  },
-  cta: {
+  cardMeta: {
     color: '#14213D',
-    fontWeight: '800',
+    marginTop: 12,
+    fontWeight: '700',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',

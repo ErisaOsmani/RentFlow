@@ -4,8 +4,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -46,20 +46,39 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      if (!data?.user?.id) {
+      const userId = data?.user?.id;
+
+      if (!userId) {
         Alert.alert('Gabim', 'Nuk u gjet perdoruesi.');
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('role')
-        .eq('id', data.user.id)
+        .select('role, email')
+        .eq('id', userId)
         .maybeSingle();
 
       if (profileError) {
-        Alert.alert('Gabim', 'Nuk u lexua profili i perdoruesit.');
+        Alert.alert('Gabim', profileError.message);
         return;
+      }
+
+      if (!profile) {
+        const { error: insertError } = await supabase.from('users').upsert([
+          {
+            id: userId,
+            email: normalizedEmail,
+            role: 'client',
+          },
+        ]);
+
+        if (insertError) {
+          Alert.alert('Gabim', insertError.message);
+          return;
+        }
+
+        profile = { role: 'client', email: normalizedEmail };
       }
 
       const targetScreen = profile?.role === 'owner' ? 'OwnerHome' : 'Home';

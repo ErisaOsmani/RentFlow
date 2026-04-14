@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
-  Text,
-  StyleSheet,
   Alert,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -15,6 +15,7 @@ import { supabase } from '../services/supabase';
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('client');
   const [loading, setLoading] = useState(false);
 
@@ -24,8 +25,8 @@ export default function SignUpScreen({ navigation }) {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    if (!normalizedEmail || !normalizedPassword) {
-      Alert.alert('Gabim', 'Ploteso email dhe password.');
+    if (!normalizedEmail || !normalizedPassword || !confirmPassword.trim()) {
+      Alert.alert('Gabim', 'Ploteso te gjitha fushat.');
       return;
     }
 
@@ -36,6 +37,11 @@ export default function SignUpScreen({ navigation }) {
 
     if (normalizedPassword.length < 6) {
       Alert.alert('Gabim', 'Password duhet te kete te pakten 6 karaktere.');
+      return;
+    }
+
+    if (normalizedPassword !== confirmPassword.trim()) {
+      Alert.alert('Gabim', 'Passwords do not match.');
       return;
     }
 
@@ -59,20 +65,20 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
-      const { error: insertError } = await supabase.from('users').insert([
+      const { error: insertError } = await supabase.from('users').upsert([
         {
           id: user.id,
-          email: user.email,
+          email: normalizedEmail,
           role,
         },
       ]);
 
       if (insertError) {
-        Alert.alert('Error DB', insertError.message);
+        Alert.alert('Error', insertError.message);
         return;
       }
 
-      Alert.alert('Success', 'Account created!');
+      Alert.alert('Success', 'Account created! Please login.');
       navigation.navigate('Login');
     } finally {
       setLoading(false);
@@ -88,7 +94,7 @@ export default function SignUpScreen({ navigation }) {
         <Text style={styles.eyebrow}>RENTFLOW</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Nderto profilin tend dhe zgjidh menyren si do ta perdorish platformen.
+          Zgjidh rolin tend dhe hyj ne platforme me nje flow me te paster.
         </Text>
       </View>
 
@@ -112,6 +118,15 @@ export default function SignUpScreen({ navigation }) {
           onChangeText={setPassword}
         />
 
+        <TextInput
+          placeholder="Confirm Password"
+          placeholderTextColor="#8F97A8"
+          secureTextEntry
+          style={styles.input}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+
         <View style={styles.roles}>
           <TouchableOpacity
             style={[styles.rolePill, role === 'client' && styles.rolePillActive]}
@@ -133,7 +148,7 @@ export default function SignUpScreen({ navigation }) {
           onPress={signup}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign Up</Text>}
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading}>

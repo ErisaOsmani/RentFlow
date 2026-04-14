@@ -1,59 +1,143 @@
 import React, { useState } from 'react';
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
-  Text,
   Alert,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 
-export default function AddApartmentScreen({ navigation }) {
-  const [title, setTitle] = useState('');
-  const [city, setCity] = useState('');
-  const [price, setPrice] = useState('');
-  const [rooms, setRooms] = useState('');
+export default function AddApartmentScreen({ navigation, route }) {
+  const editingApartment = route?.params?.apartment;
+  const storageBucket = process.env.EXPO_PUBLIC_SUPABASE_BUCKET || 'apartment-images';
+
+  const [title, setTitle] = useState(editingApartment?.title || '');
+  const [city, setCity] = useState(editingApartment?.city || '');
+  const [description, setDescription] = useState(editingApartment?.description || '');
+  const [imageUrl, setImageUrl] = useState(editingApartment?.image_url || '');
+  const [pickedImage, setPickedImage] = useState(null);
+  const [price, setPrice] = useState(
+    editingApartment?.price !== undefined && editingApartment?.price !== null
+      ? String(editingApartment.price)
+      : ''
+  );
+  const [rooms, setRooms] = useState(
+    editingApartment?.rooms !== undefined && editingApartment?.rooms !== null
+      ? String(editingApartment.rooms)
+      : ''
+  );
   const [loading, setLoading] = useState(false);
 
-  const handleAdd = async () => {
-    if (!title.trim() || !city.trim() || !price.trim() || !rooms.trim()) {
-      Alert.alert('Gabim', 'Ploteso te gjitha fushat.');
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Lejo qasjen ne galeri per te zgjedhur nje foto.');
       return;
     }
 
-    if (Number.isNaN(parseFloat(price)) || Number.isNaN(parseInt(rooms, 10))) {
-      Alert.alert('Gabim', 'Price dhe rooms duhet te jene vlera valide.');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.length) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    setPickedImage(asset);
+    setImageUrl(asset.uri);
+  };
+
+  const uploadPickedImage = async (userId) => {
+    if (!pickedImage?.base64) {
+      return imageUrl.trim() || null;
+    }
+
+    const fileExtension =
+      pickedImage.fileName?.split('.').pop()?.toLowerCase() ||
+      pickedImage.mimeType?.split('/').pop()?.toLowerCase() ||
+      'jpg';
+
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(storageBucket)
+      .upload(filePath, decode(pickedImage.base64), {
+        contentType: pickedImage.mimeType || `image/${fileExtension}`,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const handleSaveApartment = async () => {
+    if (!title || !city || !description || !price || !rooms) {
+      Alert.alert('Error', 'Ploteso te gjitha fushat.');
+      return;
+    }
+
+    const parsedPrice = Number(price);
+    const parsedRooms = Number(rooms);
+
+    if (Number.isNaN(parsedPrice) || Number.isNaN(parsedRooms)) {
+      Alert.alert('Error', 'Price dhe rooms duhet te jene numra.');
       return;
     }
 
     try {
       setLoading(true);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
 
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur si owner.');
+      if (authError || !authData?.user) {
+        Alert.alert('Error', 'User nuk u gjet.');
         return;
       }
 
-      const { error } = await supabase.from('apartments').insert({
+      const uploadedImageUrl = await uploadPickedImage(authData.user.id);
+
+      const payload = {
+        owner_id: authData.user.id,
         title: title.trim(),
         city: city.trim(),
-        price: parseFloat(price),
-        rooms: parseInt(rooms, 10),
-        owner_id: user.id,
-      });
+        description: description.trim(),
+        image_url: uploadedImageUrl,
+        price: parsedPrice,
+        rooms: parsedRooms,
+      };
+
+      const { error } = editingApartment
+        ? await supabase
+            .from('apartments')
+            .update(payload)
+            .eq('id', editingApartment.id)
+            .eq('owner_id', authData.user.id)
+        : await supabase.from('apartments').insert([payload]);
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
-      Alert.alert('Success', 'Apartment added successfully!');
+      Alert.alert(
+        'Success',
+        editingApartment ? 'Banesa u perditesua me sukses.' : 'Banesa u shtua me sukses.'
+      );
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -61,70 +145,89 @@ export default function AddApartmentScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
         <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
           <Text style={styles.backChipText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.eyebrow}>NEW LISTING</Text>
-        <Text style={styles.title}>Add Apartment</Text>
+        <Text style={styles.title}>{editingApartment ? 'Edit Apartment' : 'Add Apartment'}</Text>
         <Text style={styles.subtitle}>
-          Krijo nje listing te qarte dhe moderne per klientet qe kerkojne qira.
+          Shto ose perditeso banese me foto, pershkrim dhe qira mujore.
         </Text>
       </View>
 
       <View style={styles.card}>
         <TextInput
-          placeholder="Title"
+          placeholder="Apartment title"
           placeholderTextColor="#8F97A8"
-          style={styles.input}
           value={title}
           onChangeText={setTitle}
+          style={styles.input}
         />
         <TextInput
           placeholder="City"
           placeholderTextColor="#8F97A8"
-          style={styles.input}
           value={city}
           onChangeText={setCity}
+          style={styles.input}
         />
         <TextInput
-          placeholder="Price"
+          placeholder="Description"
           placeholderTextColor="#8F97A8"
-          keyboardType="numeric"
-          style={styles.input}
+          value={description}
+          onChangeText={setDescription}
+          style={[styles.input, styles.textArea]}
+          multiline
+          numberOfLines={5}
+        />
+        <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+          <Text style={styles.imagePickerButtonText}>
+            {pickedImage || imageUrl ? 'Change Photo' : 'Choose Photo'}
+          </Text>
+        </TouchableOpacity>
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
+        <TextInput
+          placeholder="Monthly rent"
+          placeholderTextColor="#8F97A8"
           value={price}
           onChangeText={setPrice}
+          style={styles.input}
+          keyboardType="numeric"
         />
         <TextInput
           placeholder="Rooms"
           placeholderTextColor="#8F97A8"
-          keyboardType="numeric"
-          style={styles.input}
           value={rooms}
           onChangeText={setRooms}
+          style={styles.input}
+          keyboardType="numeric"
         />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleAdd}
+          onPress={handleSaveApartment}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Apartment</Text>}
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {editingApartment ? 'Update Apartment' : 'Save Apartment'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
     backgroundColor: '#EEF1F7',
+    justifyContent: 'center',
   },
   hero: {
     backgroundColor: '#14213D',
@@ -151,9 +254,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 30,
     fontWeight: '800',
+    color: '#FFFFFF',
   },
   subtitle: {
     color: '#D3DAE6',
@@ -172,18 +275,42 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#F5F7FB',
-    borderColor: '#DEE4EF',
     borderWidth: 1,
-    borderRadius: 14,
+    borderColor: '#DEE4EF',
     padding: 14,
+    borderRadius: 14,
     marginBottom: 12,
+  },
+  textArea: {
+    minHeight: 110,
+    textAlignVertical: 'top',
+  },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: '#E5E7EB',
+  },
+  imagePickerButton: {
+    backgroundColor: '#F5F7FB',
+    borderWidth: 1,
+    borderColor: '#DEE4EF',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  imagePickerButtonText: {
+    color: '#14213D',
+    fontWeight: '700',
   },
   button: {
     marginTop: 8,
     backgroundColor: '#FF5A5F',
     borderRadius: 14,
-    alignItems: 'center',
     padding: 16,
+    alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -191,5 +318,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    fontSize: 16,
   },
 });
