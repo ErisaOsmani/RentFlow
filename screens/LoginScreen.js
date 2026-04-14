@@ -17,12 +17,19 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
+
+  const login = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
     if (!normalizedEmail || !normalizedPassword) {
       Alert.alert('Gabim', 'Ploteso email dhe password.');
+      return;
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      Alert.alert('Gabim', 'Shkruaj nje email valid.');
       return;
     }
 
@@ -35,30 +42,29 @@ export default function LoginScreen({ navigation }) {
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        Alert.alert('Login deshtoi', error.message);
         return;
       }
 
       const userId = data?.user?.id;
 
       if (!userId) {
-        Alert.alert('Error', 'User nuk u gjet.');
+        Alert.alert('Gabim', 'Nuk u gjet perdoruesi.');
         return;
       }
 
-      let { data: userData, error: userError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('users')
         .select('role, email')
         .eq('id', userId)
         .maybeSingle();
 
-      if (userError) {
-        Alert.alert('Error', userError.message);
+      if (profileError) {
+        Alert.alert('Gabim', profileError.message);
         return;
       }
 
-      // If the profile row is missing, create a basic one so login can continue.
-      if (!userData) {
+      if (!profile) {
         const { error: insertError } = await supabase.from('users').upsert([
           {
             id: userId,
@@ -68,17 +74,21 @@ export default function LoginScreen({ navigation }) {
         ]);
 
         if (insertError) {
-          Alert.alert('Error', insertError.message);
+          Alert.alert('Gabim', insertError.message);
           return;
         }
 
-        userData = { role: 'client', email: normalizedEmail };
+        profile = { role: 'client', email: normalizedEmail };
       }
+
+      const targetScreen = profile?.role === 'owner' ? 'OwnerHome' : 'Home';
 
       navigation.reset({
         index: 0,
-        routes: [{ name: userData.role === 'owner' ? 'OwnerHome' : 'Home' }],
+        routes: [{ name: targetScreen }],
       });
+    } catch (err) {
+      Alert.alert('Gabim', 'Ndodhi nje problem gjate login-it.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +103,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.eyebrow}>RENTFLOW</Text>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>
-          Hyr ne platforme dhe vazhdo me nje eksperience me moderne dhe me te paster.
+          Hyr ne platforme dhe eksploro apartamente me nje pamje me moderne dhe me te qarte.
         </Text>
       </View>
 
@@ -101,33 +111,34 @@ export default function LoginScreen({ navigation }) {
         <TextInput
           placeholder="Email"
           placeholderTextColor="#8F97A8"
-          value={email}
-          onChangeText={setEmail}
           style={styles.input}
-          keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
 
         <TextInput
           placeholder="Password"
           placeholderTextColor="#8F97A8"
-          value={password}
-          onChangeText={setPassword}
           secureTextEntry
           style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          onSubmitEditing={login}
         />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={login}
           disabled={loading}
         >
           {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Login</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('SignUp')} disabled={loading}>
-          <Text style={styles.linkText}>Create account</Text>
+          <Text style={styles.link}>Create account</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -154,9 +165,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
+    color: '#FFFFFF',
     fontSize: 30,
     fontWeight: '800',
-    color: '#FFFFFF',
   },
   subtitle: {
     color: '#D3DAE6',
@@ -175,8 +186,8 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#F5F7FB',
-    borderWidth: 1,
     borderColor: '#DEE4EF',
+    borderWidth: 1,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -185,8 +196,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: '#FF5A5F',
     borderRadius: 14,
-    padding: 16,
     alignItems: 'center',
+    padding: 16,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -194,9 +205,8 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 16,
   },
-  linkText: {
+  link: {
     marginTop: 16,
     textAlign: 'center',
     color: '#14213D',

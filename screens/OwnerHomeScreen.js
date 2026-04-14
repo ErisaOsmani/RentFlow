@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
+import { logoutUser } from '../services/auth';
 
 export default function OwnerHomeScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -78,11 +79,13 @@ export default function OwnerHomeScreen({ navigation }) {
         onPress: async () => {
           try {
             setLoggingOut(true);
-            const { error } = await supabase.auth.signOut();
+            const { error } = await logoutUser();
+
             if (error) {
-              Alert.alert('Error', error.message);
+              Alert.alert('Gabim', error.message);
               return;
             }
+
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           } finally {
             setLoggingOut(false);

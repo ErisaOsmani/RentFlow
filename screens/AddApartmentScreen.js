@@ -134,7 +134,10 @@ export default function AddApartmentScreen({ navigation, route }) {
         return;
       }
 
-      Alert.alert('Success', editingApartment ? 'Banesa u perditesua me sukses.' : 'Banesa u shtua me sukses.');
+      Alert.alert(
+        'Success',
+        editingApartment ? 'Banesa u perditesua me sukses.' : 'Banesa u shtua me sukses.'
+      );
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -183,12 +186,7 @@ export default function AddApartmentScreen({ navigation, route }) {
             {pickedImage || imageUrl ? 'Change Photo' : 'Choose Photo'}
           </Text>
         </TouchableOpacity>
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.previewImage}
-          />
-        ) : null}
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
         <TextInput
           placeholder="Monthly rent"
           placeholderTextColor="#8F97A8"
@@ -211,7 +209,13 @@ export default function AddApartmentScreen({ navigation, route }) {
           onPress={handleSaveApartment}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>{editingApartment ? 'Update Apartment' : 'Save Apartment'}</Text>}
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {editingApartment ? 'Update Apartment' : 'Save Apartment'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </ScrollView>

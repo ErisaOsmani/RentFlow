@@ -19,15 +19,28 @@ export default function SignUpScreen({ navigation }) {
   const [role, setRole] = useState('client');
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
+  const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
-    if (!normalizedEmail || !password || !confirmPassword) {
+  const signup = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    if (!normalizedEmail || !normalizedPassword || !confirmPassword.trim()) {
       Alert.alert('Gabim', 'Ploteso te gjitha fushat.');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (!isValidEmail(normalizedEmail)) {
+      Alert.alert('Gabim', 'Shkruaj nje email valid.');
+      return;
+    }
+
+    if (normalizedPassword.length < 6) {
+      Alert.alert('Gabim', 'Password duhet te kete te pakten 6 karaktere.');
+      return;
+    }
+
+    if (normalizedPassword !== confirmPassword.trim()) {
       Alert.alert('Gabim', 'Passwords do not match.');
       return;
     }
@@ -37,7 +50,7 @@ export default function SignUpScreen({ navigation }) {
 
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
-        password,
+        password: normalizedPassword,
       });
 
       if (error) {
@@ -48,7 +61,7 @@ export default function SignUpScreen({ navigation }) {
       const user = data?.user;
 
       if (!user) {
-        Alert.alert('Error', 'User nuk u krijua.');
+        Alert.alert('Error', 'User nuk u krijua. Kontrollo email confirmation.');
         return;
       }
 
@@ -89,27 +102,29 @@ export default function SignUpScreen({ navigation }) {
         <TextInput
           placeholder="Email"
           placeholderTextColor="#8F97A8"
-          value={email}
-          onChangeText={setEmail}
           style={styles.input}
           autoCapitalize="none"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
+
         <TextInput
           placeholder="Password"
           placeholderTextColor="#8F97A8"
-          value={password}
-          onChangeText={setPassword}
           secureTextEntry
           style={styles.input}
+          value={password}
+          onChangeText={setPassword}
         />
+
         <TextInput
           placeholder="Confirm Password"
           placeholderTextColor="#8F97A8"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
           secureTextEntry
           style={styles.input}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
         />
 
         <View style={styles.roles}>
@@ -119,6 +134,7 @@ export default function SignUpScreen({ navigation }) {
           >
             <Text style={[styles.roleText, role === 'client' && styles.roleTextActive]}>Client</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.rolePill, role === 'owner' && styles.rolePillActive]}
             onPress={() => setRole('owner')}
@@ -129,14 +145,14 @@ export default function SignUpScreen({ navigation }) {
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignUp}
+          onPress={signup}
           disabled={loading}
         >
           {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading}>
-          <Text style={styles.linkText}>Already have an account? Login</Text>
+          <Text style={styles.link}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -163,9 +179,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
+    color: '#FFFFFF',
     fontSize: 30,
     fontWeight: '800',
-    color: '#FFFFFF',
   },
   subtitle: {
     color: '#D3DAE6',
@@ -184,8 +200,8 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#F5F7FB',
-    borderWidth: 1,
     borderColor: '#DEE4EF',
+    borderWidth: 1,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -219,8 +235,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     backgroundColor: '#FF5A5F',
     borderRadius: 14,
-    padding: 16,
     alignItems: 'center',
+    padding: 16,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -228,9 +244,8 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 16,
   },
-  linkText: {
+  link: {
     marginTop: 16,
     textAlign: 'center',
     color: '#14213D',
