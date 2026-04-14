@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { supabase } from '../services/supabase';
+
+export default function BookingScreen({ route, navigation }) {
+  const { apartment } = route.params;
+
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const getNightCount = () => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return 0;
+    }
+
+    const diffMs = endDate.getTime() - startDate.getTime();
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    return days > 0 ? days : 0;
+  };
+
+  const nightCount = getNightCount();
+  const totalPrice = nightCount * Number(apartment.price || 0);
+
+  const book = async () => {
+    if (!start.trim() || !end.trim()) {
+      Alert.alert('Gabim', 'Ploteso datat e rezervimit.');
+      return;
+    }
+
+    if (!nightCount) {
+      Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        Alert.alert('Gabim', 'Duhet te jesh i kycur per te bere rezervim.');
+        return;
+      }
+
+      const { error } = await supabase.from('bookings').insert({
+        user_id: user.id,
+        apartment_id: apartment.id,
+        start_date: start.trim(),
+        end_date: end.trim(),
+      });
+
+      if (error) {
+        Alert.alert('Gabim', error.message);
+        return;
+      }
+
+      Alert.alert('Success', 'Booking successful!');
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.hero}>
+        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+          <Text style={styles.backChipText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.eyebrow}>BOOKING</Text>
+        <Text style={styles.title}>{apartment.title}</Text>
+        <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / night</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Choose your stay</Text>
+
+        <TextInput
+          placeholder="Start date (YYYY-MM-DD)"
+          placeholderTextColor="#8F97A8"
+          style={styles.input}
+          value={start}
+          onChangeText={setStart}
+        />
+
+        <TextInput
+          placeholder="End date (YYYY-MM-DD)"
+          placeholderTextColor="#8F97A8"
+          style={styles.input}
+          value={end}
+          onChangeText={setEnd}
+        />
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Night stay</Text>
+          <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
+          <Text style={styles.summaryLabel}>Estimated total</Text>
+          <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={book}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Confirm Booking</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#EEF1F7',
+  },
+  hero: {
+    backgroundColor: '#14213D',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 18,
+  },
+  backChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  backChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  eyebrow: {
+    color: '#FCA5A5',
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    marginBottom: 10,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+  },
+  subtitle: {
+    color: '#D3DAE6',
+    marginTop: 8,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    shadowColor: '#12213F',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  sectionTitle: {
+    color: '#14213D',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+  summaryCard: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    color: '#667085',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  summaryValue: {
+    color: '#14213D',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  summaryTotal: {
+    color: '#FF5A5F',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  button: {
+    marginTop: 8,
+    backgroundColor: '#FF5A5F',
+    borderRadius: 14,
+    alignItems: 'center',
+    padding: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+});
