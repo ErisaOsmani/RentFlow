@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
+import { parseImageUrls } from '../utils/apartmentImages';
 
 export default function AddApartmentScreen({ navigation, route }) {
   const editingApartment = route?.params?.apartment;
@@ -21,8 +22,8 @@ export default function AddApartmentScreen({ navigation, route }) {
   const [title, setTitle] = useState(editingApartment?.title || '');
   const [city, setCity] = useState(editingApartment?.city || '');
   const [description, setDescription] = useState(editingApartment?.description || '');
-  const [imageUrl, setImageUrl] = useState(editingApartment?.image_url || '');
-  const [pickedImage, setPickedImage] = useState(null);
+  const [imageUrls, setImageUrls] = useState(parseImageUrls(editingApartment?.image_url));
+  const [pickedImages, setPickedImages] = useState([]);
   const [price, setPrice] = useState(
     editingApartment?.price !== undefined && editingApartment?.price !== null
       ? String(editingApartment.price)
@@ -45,7 +46,7 @@ export default function AddApartmentScreen({ navigation, route }) {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsMultipleSelection: true,
       quality: 0.8,
       base64: true,
     });
@@ -54,36 +55,48 @@ export default function AddApartmentScreen({ navigation, route }) {
       return;
     }
 
-    const asset = result.assets[0];
-    setPickedImage(asset);
-    setImageUrl(asset.uri);
+    setPickedImages(result.assets);
+    setImageUrls(result.assets.map((asset) => asset.uri));
   };
 
-  const uploadPickedImage = async (userId) => {
-    if (!pickedImage?.base64) {
-      return imageUrl.trim() || null;
+  const removeImage = (indexToRemove) => {
+    setImageUrls((current) => current.filter((_, index) => index !== indexToRemove));
+    setPickedImages((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const uploadPickedImages = async (userId) => {
+    if (!pickedImages.length) {
+      return imageUrls.filter(Boolean);
     }
 
-    const fileExtension =
-      pickedImage.fileName?.split('.').pop()?.toLowerCase() ||
-      pickedImage.mimeType?.split('/').pop()?.toLowerCase() ||
-      'jpg';
+    const uploadedUrls = await Promise.all(
+      pickedImages.map(async (pickedImage) => {
+        const fileExtension =
+          pickedImage.fileName?.split('.').pop()?.toLowerCase() ||
+          pickedImage.mimeType?.split('/').pop()?.toLowerCase() ||
+          'jpg';
 
-    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+        const filePath = `${userId}/${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}.${fileExtension}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(storageBucket)
-      .upload(filePath, decode(pickedImage.base64), {
-        contentType: pickedImage.mimeType || `image/${fileExtension}`,
-        upsert: false,
-      });
+        const { error: uploadError } = await supabase.storage
+          .from(storageBucket)
+          .upload(filePath, decode(pickedImage.base64), {
+            contentType: pickedImage.mimeType || `image/${fileExtension}`,
+            upsert: false,
+          });
 
-    if (uploadError) {
-      throw uploadError;
-    }
+        if (uploadError) {
+          throw uploadError;
+        }
 
-    const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
-    return data.publicUrl;
+        const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
+        return data.publicUrl;
+      })
+    );
+
+    return uploadedUrls;
   };
 
   const handleSaveApartment = async () => {
@@ -109,14 +122,14 @@ export default function AddApartmentScreen({ navigation, route }) {
         return;
       }
 
-      const uploadedImageUrl = await uploadPickedImage(authData.user.id);
+      const uploadedImageUrls = await uploadPickedImages(authData.user.id);
 
       const payload = {
         owner_id: authData.user.id,
         title: title.trim(),
         city: city.trim(),
         description: description.trim(),
-        image_url: uploadedImageUrl,
+        image_url: uploadedImageUrls.length ? JSON.stringify(uploadedImageUrls) : null,
         price: parsedPrice,
         rooms: parsedRooms,
       };
@@ -183,10 +196,27 @@ export default function AddApartmentScreen({ navigation, route }) {
         />
         <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
           <Text style={styles.imagePickerButtonText}>
-            {pickedImage || imageUrl ? 'Change Photo' : 'Choose Photo'}
+            {imageUrls.length ? 'Change Photos' : 'Choose Photos'}
           </Text>
         </TouchableOpacity>
-        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
+        {imageUrls.length ? (
+          <>
+            <Text style={styles.imageCountText}>{imageUrls.length} photo selected</Text>
+            <View style={styles.previewGrid}>
+              {imageUrls.map((uri, index) => (
+                <View key={`${uri}-${index}`} style={styles.previewCard}>
+                  <Image source={{ uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Text style={styles.removeImageButtonText}>X</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
         <TextInput
           placeholder="Monthly rent"
           placeholderTextColor="#8F97A8"
@@ -285,13 +315,6 @@ const styles = StyleSheet.create({
     minHeight: 110,
     textAlignVertical: 'top',
   },
-  previewImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 16,
-    marginBottom: 12,
-    backgroundColor: '#E5E7EB',
-  },
   imagePickerButton: {
     backgroundColor: '#F5F7FB',
     borderWidth: 1,
@@ -304,6 +327,43 @@ const styles = StyleSheet.create({
   imagePickerButtonText: {
     color: '#14213D',
     fontWeight: '700',
+  },
+  imageCountText: {
+    color: '#667085',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  previewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 12,
+  },
+  previewCard: {
+    width: '47%',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: 16,
+    backgroundColor: '#E5E7EB',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(20,33,61,0.82)',
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
   },
   button: {
     marginTop: 8,
