@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
+import { getPrimaryImageUrl } from '../utils/apartmentImages';
 
 export default function HomeScreen({ navigation }) {
   const [sections, setSections] = useState([]);
@@ -124,19 +125,25 @@ export default function HomeScreen({ navigation }) {
         renderSectionHeader={({ section: { title } }) => (
           <Text style={styles.cityHeader}>{title}</Text>
         )}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.cardImage} /> : null}
-            <View style={styles.cardTop}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceBadgeText}>${item.price}</Text>
+        renderItem={({ item }) => {
+          const primaryImageUrl = getPrimaryImageUrl(item.image_url);
+
+          return (
+            <View style={styles.card}>
+              {primaryImageUrl ? (
+                <Image source={{ uri: primaryImageUrl }} style={styles.cardImage} />
+              ) : null}
+              <View style={styles.cardTop}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <View style={styles.priceBadge}>
+                  <Text style={styles.priceBadgeText}>${item.price}</Text>
+                </View>
               </View>
+              <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+              <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
             </View>
-            <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
-            <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );

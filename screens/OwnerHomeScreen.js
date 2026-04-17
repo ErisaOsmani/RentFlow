@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
+import { getPrimaryImageUrl } from '../utils/apartmentImages';
 
 export default function OwnerHomeScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -136,36 +137,42 @@ export default function OwnerHomeScreen({ navigation }) {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.cardImage} /> : null}
-            <View style={styles.cardTop}>
-              <View style={styles.cardTextWrap}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardCity}>{item.city}</Text>
+        renderItem={({ item }) => {
+          const primaryImageUrl = getPrimaryImageUrl(item.image_url);
+
+          return (
+            <View style={styles.card}>
+              {primaryImageUrl ? (
+                <Image source={{ uri: primaryImageUrl }} style={styles.cardImage} />
+              ) : null}
+              <View style={styles.cardTop}>
+                <View style={styles.cardTextWrap}>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardCity}>{item.city}</Text>
+                </View>
+                <View style={styles.priceBadge}>
+                  <Text style={styles.priceBadgeText}>${item.price}</Text>
+                </View>
               </View>
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceBadgeText}>${item.price}</Text>
+              <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+              <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => navigation.navigate('AddApartment', { apartment: item })}
+                >
+                  <Text style={styles.secondaryButtonText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDelete(item.id)}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
-            <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('AddApartment', { apartment: item })}
-              >
-                <Text style={styles.secondaryButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id)}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );
