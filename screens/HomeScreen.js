@@ -105,6 +105,10 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.subtitle}>
           Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
         </Text>
+
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('BookingHistory')}>
+          <Text style={styles.historyButtonText}>My bookings</Text>
+        </TouchableOpacity>
       </View>
 
       <SectionList
@@ -129,7 +133,11 @@ export default function HomeScreen({ navigation }) {
           const primaryImageUrl = getPrimaryImageUrl(item.image_url);
 
           return (
-            <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ApartmentDetail', { apartment: item })}
+            >
               {primaryImageUrl ? (
                 <Image source={{ uri: primaryImageUrl }} style={styles.cardImage} />
               ) : null}
@@ -141,7 +149,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
               <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
-            </View>
+            </TouchableOpacity>
           );
         }}
       />
@@ -199,6 +207,20 @@ const styles = StyleSheet.create({
   logoutChipText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  historyButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D2D8E3',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 18,
+    alignItems: 'center',
+  },
+  historyButtonText: {
+    color: '#14213D',
+    fontWeight: '800',
   },
   list: {
     width: '100%',

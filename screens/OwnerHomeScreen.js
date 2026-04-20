@@ -121,6 +121,10 @@ export default function OwnerHomeScreen({ navigation }) {
         <Text style={styles.primaryButtonText}>Add Apartment</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('OwnerBookingHistory')}>
+        <Text style={styles.ownerActionButtonText}>View bookings</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>My Apartments</Text>
 
       <FlatList
@@ -238,6 +242,20 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 16,
+  },
+  ownerActionButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DEE4EF',
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  ownerActionButtonText: {
+    color: '#14213D',
     fontWeight: '800',
     fontSize: 16,
   },
