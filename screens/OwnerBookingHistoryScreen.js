@@ -19,8 +19,9 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     try {
       setLoading(true);
       const { data: authData, error: authError } = await supabase.auth.getUser();
+      const ownerId = authData?.user?.id;
 
-      if (authError || !authData?.user) {
+      if (authError || !ownerId) {
         Alert.alert('Gabim', 'Duhet te jesh i kycur per te pare rezervimet e apartamenteve.' );
         navigation.goBack();
         return;
@@ -29,7 +30,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')
         .select('id, title, city')
-        .eq('owner_id', authData.user.id);
+        .eq('owner_id', ownerId);
 
       if (apartmentsError) {
         Alert.alert('Gabim', apartmentsError.message);
@@ -43,16 +44,33 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return;
       }
 
-      const { data: bookingsData, error: bookingsError } = await supabase
+      const { data: bookingsByOwner, error: bookingsByOwnerError } = await supabase
         .from('bookings')
         .select('id, start_date, end_date, user_id, apartment_id')
-        .in('apartment_id', apartmentIds)
+        .eq('owner_id', ownerId)
         .order('start_date', { ascending: false });
 
-      if (bookingsError) {
-        Alert.alert('Gabim', bookingsError.message);
+      if (bookingsByOwnerError && bookingsByOwnerError.code !== '42703') {
+        Alert.alert('Gabim', bookingsByOwnerError.message);
         return;
       }
+
+      const hasOwnerBookings = Array.isArray(bookingsByOwner) && bookingsByOwner.length > 0;
+
+      const { data: bookingsByApartment, error: bookingsByApartmentError } = hasOwnerBookings
+        ? { data: null, error: null }
+        : await supabase
+            .from('bookings')
+            .select('id, start_date, end_date, user_id, apartment_id')
+            .in('apartment_id', apartmentIds)
+            .order('start_date', { ascending: false });
+
+      if (bookingsByApartmentError) {
+        Alert.alert('Gabim', bookingsByApartmentError.message);
+        return;
+      }
+
+      const bookingsData = hasOwnerBookings ? bookingsByOwner : bookingsByApartment;
 
       const apartmentMap = (apartments || []).reduce((acc, apartment) => {
         acc[apartment.id] = apartment;

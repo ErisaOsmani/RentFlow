@@ -24,7 +24,7 @@ export default function HomeScreen({ navigation }) {
       setLoading(true);
       const { data, error } = await supabase
         .from('apartments')
-        .select('id, title, city, description, image_url, price, rooms')
+        .select('id, owner_id, title, city, description, image_url, price, rooms')
         .order('city', { ascending: true })
         .order('title', { ascending: true });
 

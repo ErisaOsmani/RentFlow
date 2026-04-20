@@ -96,8 +96,31 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      let ownerId = apartment.owner_id;
+
+      if (!ownerId && apartment.id) {
+        const { data: apartmentData, error: apartmentError } = await supabase
+          .from('apartments')
+          .select('owner_id')
+          .eq('id', apartment.id)
+          .maybeSingle();
+
+        if (apartmentError) {
+          Alert.alert('Gabim', apartmentError.message);
+          return;
+        }
+
+        ownerId = apartmentData?.owner_id;
+      }
+
+      if (!ownerId) {
+        Alert.alert('Gabim', 'Owner-i i kesaj banese nuk u gjet.');
+        return;
+      }
+
       const { error } = await supabase.from('bookings').insert({
         user_id: authData.user.id,
+        owner_id: ownerId,
         apartment_id: apartment.id,
         start_date: startDate.trim(),
         end_date: endDate.trim(),
