@@ -106,9 +106,14 @@ export default function HomeScreen({ navigation }) {
           Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
         </Text>
 
-        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('BookingHistory')}>
-          <Text style={styles.historyButtonText}>My bookings</Text>
-        </TouchableOpacity>
+        <View style={styles.heroButtons}>
+          <TouchableOpacity style={styles.searchButton} onPress={() => navigation.navigate('Search')}>
+            <Text style={styles.searchButtonText}>Search & Filter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('BookingHistory')}>
+            <Text style={styles.historyButtonText}>My bookings</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SectionList
@@ -208,19 +213,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  heroButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  searchButton: {
+    flex: 1,
+    backgroundColor: '#14213D',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 14,
+  },
   historyButton: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#D2D8E3',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginTop: 18,
     alignItems: 'center',
   },
   historyButtonText: {
     color: '#14213D',
     fontWeight: '800',
+    fontSize: 14,
   },
   list: {
     width: '100%',
