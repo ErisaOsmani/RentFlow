@@ -37,7 +37,10 @@ export default function BookingScreen({ route, navigation }) {
   const totalPrice = nightCount * Number(apartment.price || 0);
 
   const book = async () => {
-    if (!start.trim() || !end.trim()) {
+    const normalizedStart = start.trim();
+    const normalizedEnd = end.trim();
+
+    if (!normalizedStart || !normalizedEnd) {
       Alert.alert('Gabim', 'Ploteso datat e rezervimit.');
       return;
     }
@@ -79,12 +82,34 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
+      const { data: conflictingBookings, error: conflictError } = await supabase
+        .from('bookings')
+        .select('id, start_date, end_date')
+        .eq('apartment_id', apartment.id)
+        .lt('start_date', normalizedEnd)
+        .gt('end_date', normalizedStart)
+        .limit(1);
+
+      if (conflictError) {
+        Alert.alert('Gabim', conflictError.message);
+        return;
+      }
+
+      if (conflictingBookings?.length) {
+        const conflict = conflictingBookings[0];
+        Alert.alert(
+          'Gabim',
+          `Ky apartament eshte i rezervuar nga ${conflict.start_date} deri me ${conflict.end_date}. Zgjidh data te tjera.`
+        );
+        return;
+      }
+
       const { error } = await supabase.from('bookings').insert({
         user_id: user.id,
         owner_id: ownerId,
         apartment_id: apartment.id,
-        start_date: start.trim(),
-        end_date: end.trim(),
+        start_date: normalizedStart,
+        end_date: normalizedEnd,
       });
 
       if (error) {
