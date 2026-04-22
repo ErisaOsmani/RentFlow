@@ -112,7 +112,10 @@ export default function ApartmentDetailScreen() {
   };
 
   const handleBook = async () => {
-    if (!startDate.trim() || !endDate.trim()) {
+    const normalizedStart = startDate.trim();
+    const normalizedEnd = endDate.trim();
+
+    if (!normalizedStart || !normalizedEnd) {
       Alert.alert('Gabim', 'Ploteso datat e rezervimit.');
       return;
     }
@@ -154,12 +157,34 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      const { data: conflictingBookings, error: conflictError } = await supabase
+        .from('bookings')
+        .select('id, start_date, end_date')
+        .eq('apartment_id', apartment.id)
+        .lt('start_date', normalizedEnd)
+        .gt('end_date', normalizedStart)
+        .limit(1);
+
+      if (conflictError) {
+        Alert.alert('Gabim', conflictError.message);
+        return;
+      }
+
+      if (conflictingBookings?.length) {
+        const conflict = conflictingBookings[0];
+        Alert.alert(
+          'Gabim',
+          `Ky apartament eshte i rezervuar nga ${conflict.start_date} deri me ${conflict.end_date}. Zgjidh data te tjera.`
+        );
+        return;
+      }
+
       const { error } = await supabase.from('bookings').insert({
         user_id: authData.user.id,
         owner_id: ownerId,
         apartment_id: apartment.id,
-        start_date: startDate.trim(),
-        end_date: endDate.trim(),
+        start_date: normalizedStart,
+        end_date: normalizedEnd,
       });
 
       if (error) {
