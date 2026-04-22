@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Modal,
+  FlatList,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
@@ -21,12 +24,16 @@ export default function ApartmentDetailScreen() {
 
   const imageUrls = useMemo(() => parseImageUrls(apartment?.image_url), [apartment?.image_url]);
   const heroImage = imageUrls[0] || getPrimaryImageUrl(apartment?.image_url);
+  const { width } = useWindowDimensions();
+  const galleryListRef = useRef(null);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentLoading, setRecentLoading] = useState(true);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const loadRecentBookings = useCallback(async () => {
     if (!apartment?.id) {
@@ -58,6 +65,21 @@ export default function ApartmentDetailScreen() {
     loadRecentBookings();
   }, [loadRecentBookings]);
 
+  useEffect(() => {
+    if (!viewerVisible || !galleryListRef.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      galleryListRef.current?.scrollToIndex({
+        index: viewerIndex,
+        animated: false,
+      });
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [viewerIndex, viewerVisible]);
+
   const getNightCount = () => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -74,6 +96,20 @@ export default function ApartmentDetailScreen() {
 
   const nightCount = getNightCount();
   const totalPrice = nightCount * Number(apartment?.price || 0);
+
+  const openImageViewer = (index) => {
+    setViewerIndex(index);
+    setViewerVisible(true);
+  };
+
+  const handleViewerScroll = (event) => {
+    if (!width) {
+      return;
+    }
+
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+    setViewerIndex(nextIndex);
+  };
 
   const handleBook = async () => {
     if (!startDate.trim() || !endDate.trim()) {
@@ -158,7 +194,9 @@ export default function ApartmentDetailScreen() {
       </TouchableOpacity>
 
       {heroImage ? (
-        <Image source={{ uri: heroImage }} style={styles.heroImage} />
+        <TouchableOpacity activeOpacity={0.9} onPress={() => openImageViewer(0)}>
+          <Image source={{ uri: heroImage }} style={styles.heroImage} />
+        </TouchableOpacity>
       ) : (
         <View style={styles.heroPlaceholder}>
           <Text style={styles.heroPlaceholderText}>No image available</Text>
@@ -196,11 +234,13 @@ export default function ApartmentDetailScreen() {
           <Text style={styles.sectionTitle}>Gallery</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gallery}>
             {imageUrls.map((imageUrl, index) => (
-              <Image
+              <TouchableOpacity
                 key={`${imageUrl}-${index}`}
-                source={{ uri: imageUrl }}
-                style={styles.galleryImage}
-              />
+                activeOpacity={0.9}
+                onPress={() => openImageViewer(index)}
+              >
+                <Image source={{ uri: imageUrl }} style={styles.galleryImage} />
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -260,6 +300,48 @@ export default function ApartmentDetailScreen() {
           <Text style={styles.description}>No recent bookings for this apartment.</Text>
         )}
       </View>
+
+      <Modal
+        visible={viewerVisible}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={() => setViewerVisible(false)}
+      >
+        <View style={styles.viewerContainer}>
+          <View style={styles.viewerHeader}>
+            <TouchableOpacity
+              style={styles.viewerCloseButton}
+              onPress={() => setViewerVisible(false)}
+            >
+              <Text style={styles.viewerCloseText}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.viewerCounter}>
+              {imageUrls.length ? `${viewerIndex + 1} / ${imageUrls.length}` : ''}
+            </Text>
+          </View>
+
+          <FlatList
+            ref={galleryListRef}
+            data={imageUrls}
+            keyExtractor={(item, index) => `${item}-${index}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={viewerIndex}
+            onMomentumScrollEnd={handleViewerScroll}
+            getItemLayout={(_, index) => ({
+              length: width,
+              offset: width * index,
+              index,
+            })}
+            renderItem={({ item }) => (
+              <View style={[styles.viewerSlide, { width }]}>
+                <Image source={{ uri: item }} style={styles.viewerImage} resizeMode="contain" />
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -455,5 +537,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  viewerContainer: {
+    flex: 1,
+    backgroundColor: '#050816',
+    paddingTop: 56,
+  },
+  viewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  viewerCloseButton: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  viewerCloseText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  viewerCounter: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  viewerSlide: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  viewerImage: {
+    width: '100%',
+    height: '78%',
   },
 });
