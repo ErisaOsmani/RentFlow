@@ -13,6 +13,9 @@ import {
 import { supabase } from '../services/supabase';
 
 export default function SignUpScreen({ navigation }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,10 +25,20 @@ export default function SignUpScreen({ navigation }) {
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
   const signup = async () => {
+    const normalizedFirstName = firstName.trim();
+    const normalizedLastName = lastName.trim();
+    const normalizedPhone = phone.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    if (!normalizedEmail || !normalizedPassword || !confirmPassword.trim()) {
+    if (
+      !normalizedFirstName ||
+      !normalizedLastName ||
+      !normalizedPhone ||
+      !normalizedEmail ||
+      !normalizedPassword ||
+      !confirmPassword.trim()
+    ) {
       Alert.alert('Gabim', 'Ploteso te gjitha fushat.');
       return;
     }
@@ -65,13 +78,47 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
-      const { error: insertError } = await supabase.from('users').upsert([
+      const userPayloadOptions = [
+        {
+          id: user.id,
+          email: normalizedEmail,
+          role,
+          first_name: normalizedFirstName,
+          last_name: normalizedLastName,
+          phone: normalizedPhone,
+        },
+        {
+          id: user.id,
+          email: normalizedEmail,
+          role,
+          first_name: normalizedFirstName,
+          last_name: normalizedLastName,
+        },
         {
           id: user.id,
           email: normalizedEmail,
           role,
         },
-      ]);
+      ];
+
+      let insertError = null;
+
+      for (const payload of userPayloadOptions) {
+        const { error } = await supabase.from('users').upsert([payload]);
+
+        if (!error) {
+          insertError = null;
+          break;
+        }
+
+        if (error.code === '42703') {
+          insertError = error;
+          continue;
+        }
+
+        insertError = error;
+        break;
+      }
 
       if (insertError) {
         Alert.alert('Error', insertError.message);
@@ -99,6 +146,31 @@ export default function SignUpScreen({ navigation }) {
       </View>
 
       <View style={styles.card}>
+        <TextInput
+          placeholder="First name"
+          placeholderTextColor="#8F97A8"
+          style={styles.input}
+          value={firstName}
+          onChangeText={setFirstName}
+        />
+
+        <TextInput
+          placeholder="Last name"
+          placeholderTextColor="#8F97A8"
+          style={styles.input}
+          value={lastName}
+          onChangeText={setLastName}
+        />
+
+        <TextInput
+          placeholder="Phone number"
+          placeholderTextColor="#8F97A8"
+          style={styles.input}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+
         <TextInput
           placeholder="Email"
           placeholderTextColor="#8F97A8"
