@@ -77,9 +77,43 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return acc;
       }, {});
 
+      const guestIds = [...new Set((bookingsData || []).map((booking) => booking.user_id).filter(Boolean))];
+      let guestMap = {};
+
+      if (guestIds.length) {
+        const guestQueries = [
+          'id, email, first_name, last_name, phone',
+          'id, email, first_name, last_name',
+          'id, email',
+        ];
+
+        for (const selectFields of guestQueries) {
+          const { data: guestData, error: guestError } = await supabase
+            .from('users')
+            .select(selectFields)
+            .in('id', guestIds);
+
+          if (guestError) {
+            if (guestError.code === '42703') {
+              continue;
+            }
+
+            Alert.alert('Gabim', guestError.message);
+            return;
+          }
+
+          guestMap = (guestData || []).reduce((acc, guest) => {
+            acc[guest.id] = guest;
+            return acc;
+          }, {});
+          break;
+        }
+      }
+
       setBookings((bookingsData || []).map((booking) => ({
         ...booking,
         apartment: apartmentMap[booking.apartment_id] || null,
+        guest: guestMap[booking.user_id] || null,
       })));
     } finally {
       setLoading(false);
@@ -91,6 +125,15 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       loadBookings();
     }, [loadBookings])
   );
+
+  const getGuestName = (guest) => {
+    if (!guest) {
+      return 'Unknown guest';
+    }
+
+    const fullName = [guest.first_name, guest.last_name].filter(Boolean).join(' ').trim();
+    return fullName || guest.email || 'Unknown guest';
+  };
 
   const renderBooking = ({ item }) => (
     <View style={styles.card}>
@@ -104,7 +147,8 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         <Text style={styles.metaLabel}>To</Text>
         <Text style={styles.metaValue}>{item.end_date}</Text>
       </View>
-      <Text style={styles.userIdLabel}>Guest ID: {item.user_id}</Text>
+      <Text style={styles.guestNameLabel}>Guest: {getGuestName(item.guest)}</Text>
+      <Text style={styles.userIdLabel}>Phone: {item.guest?.phone || 'Nuk ka numer'}</Text>
     </View>
   );
 
@@ -202,9 +246,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   userIdLabel: {
-    marginTop: 10,
+    marginTop: 6,
     color: '#667085',
     fontWeight: '700',
+  },
+  guestNameLabel: {
+    marginTop: 10,
+    color: '#14213D',
+    fontWeight: '800',
   },
   emptyState: {
     flex: 1,
