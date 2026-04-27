@@ -157,6 +157,33 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      let guestProfile = null;
+      const guestProfileQueries = [
+        'first_name, last_name, phone',
+        'first_name, last_name',
+        'id',
+      ];
+
+      for (const selectFields of guestProfileQueries) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select(selectFields)
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (profileError?.code === '42703') {
+          continue;
+        }
+
+        if (profileError) {
+          Alert.alert('Gabim', profileError.message);
+          return;
+        }
+
+        guestProfile = profileData;
+        break;
+      }
+
       const { data: conflictingBookings, error: conflictError } = await supabase
         .from('bookings')
         .select('id, start_date, end_date')
@@ -179,13 +206,44 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
-      const { error } = await supabase.from('bookings').insert({
-        user_id: authData.user.id,
-        owner_id: ownerId,
-        apartment_id: apartment.id,
-        start_date: normalizedStart,
-        end_date: normalizedEnd,
-      });
+      const bookingPayloadOptions = [
+        {
+          user_id: authData.user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+          guest_first_name: guestProfile?.first_name || null,
+          guest_last_name: guestProfile?.last_name || null,
+          guest_phone: guestProfile?.phone || null,
+        },
+        {
+          user_id: authData.user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+        },
+      ];
+
+      let error = null;
+
+      for (const payload of bookingPayloadOptions) {
+        const result = await supabase.from('bookings').insert(payload);
+
+        if (!result.error) {
+          error = null;
+          break;
+        }
+
+        if (result.error.code === '42703') {
+          error = result.error;
+          continue;
+        }
+
+        error = result.error;
+        break;
+      }
 
       if (error) {
         Alert.alert('Gabim', error.message);
@@ -601,3 +659,4 @@ const styles = StyleSheet.create({
     height: '78%',
   },
 });
+  
