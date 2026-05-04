@@ -86,7 +86,9 @@ export default function BookingHistoryScreen({ navigation }) {
         {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.cardImage} /> : null}
         <View style={styles.cardTop}>
           <Text style={styles.cardTitle}>{item.apartment?.title || 'Unknown Apartment'}</Text>
-          <Text style={styles.priceBadgeText}>${item.apartment?.price || 'N/A'}</Text>
+          <Text style={styles.priceBadgeText}>
+            {item.apartment?.price ? `$${item.apartment.price} / month` : 'N/A'}
+          </Text>
         </View>
         <Text style={styles.cardCity}>{item.apartment?.city || 'Unknown city'}</Text>
         <View style={styles.row}>

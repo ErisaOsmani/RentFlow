@@ -15,6 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
+import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function ApartmentDetailScreen() {
@@ -80,22 +81,8 @@ export default function ApartmentDetailScreen() {
     return () => clearTimeout(timeoutId);
   }, [viewerIndex, viewerVisible]);
 
-  const getNightCount = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      return 0;
-    }
-
-    const diffMs = end.getTime() - start.getTime();
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    return days > 0 ? days : 0;
-  };
-
-  const nightCount = getNightCount();
-  const totalPrice = nightCount * Number(apartment?.price || 0);
+  const monthCount = getBillingMonthCount(startDate, endDate);
+  const totalPrice = getMonthlyBookingTotal(apartment?.price, startDate, endDate);
 
   const openImageViewer = (index) => {
     setViewerIndex(index);
@@ -120,7 +107,7 @@ export default function ApartmentDetailScreen() {
       return;
     }
 
-    if (!nightCount) {
+    if (!monthCount) {
       Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
       return;
     }
@@ -292,7 +279,7 @@ export default function ApartmentDetailScreen() {
           <Text style={styles.location}>{apartment.city}</Text>
         </View>
         <View style={styles.priceBadge}>
-          <Text style={styles.priceBadgeText}>${apartment.price}</Text>
+          <Text style={styles.priceBadgeText}>${apartment.price} / month</Text>
         </View>
       </View>
 
@@ -341,8 +328,10 @@ export default function ApartmentDetailScreen() {
         />
 
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Night stay</Text>
-          <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
+          <Text style={styles.summaryLabel}>Monthly stay</Text>
+          <Text style={styles.summaryValue}>
+            {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+          </Text>
           <Text style={styles.summaryLabel}>Estimated total</Text>
           <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
         </View>
