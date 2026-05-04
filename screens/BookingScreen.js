@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { supabase } from '../services/supabase';
+import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function BookingScreen({ route, navigation }) {
   const { apartment } = route.params;
@@ -187,53 +188,48 @@ export default function BookingScreen({ route, navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.hero}>
-        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChipText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.eyebrow}>BOOKING</Text>
-        <Text style={styles.title}>{apartment.title}</Text>
-        <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / night</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Choose your stay</Text>
-
-        <TextInput
-          placeholder="Start date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={start}
-          onChangeText={setStart}
-        />
-
-        <TextInput
-          placeholder="End date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={end}
-          onChangeText={setEnd}
-        />
-
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Night stay</Text>
-          <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
-          <Text style={styles.summaryLabel}>Estimated total</Text>
-          <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+            <Text style={styles.backChipText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.eyebrow}>BOOKING</Text>
+          <Text style={styles.title}>{apartment.title}</Text>
+          <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / night</Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={book}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Confirm Booking</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Choose your stay</Text>
+
+          <DateRangeCalendar
+            startDate={start}
+            endDate={end}
+            onChange={(nextStart, nextEnd) => {
+              setStart(nextStart);
+              setEnd(nextEnd);
+            }}
+          />
+
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Night stay</Text>
+            <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
+            <Text style={styles.summaryLabel}>Estimated total</Text>
+            <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={book}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Confirm Booking</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -241,8 +237,10 @@ export default function BookingScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#EEF1F7',
+  },
+  content: {
+    padding: 20,
   },
   hero: {
     backgroundColor: '#14213D',
@@ -292,14 +290,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 16,
-  },
-  input: {
-    backgroundColor: '#F5F7FB',
-    borderColor: '#DEE4EF',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
   },
   summaryCard: {
     backgroundColor: '#F8FAFC',

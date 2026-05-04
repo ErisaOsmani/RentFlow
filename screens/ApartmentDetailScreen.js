@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  TextInput,
   ActivityIndicator,
   Alert,
   Modal,
@@ -16,6 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
+import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function ApartmentDetailScreen() {
   const navigation = useNavigation();
@@ -331,19 +331,13 @@ export default function ApartmentDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Book this apartment</Text>
-        <TextInput
-          placeholder="Start date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={startDate}
-          onChangeText={setStartDate}
-        />
-        <TextInput
-          placeholder="End date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={endDate}
-          onChangeText={setEndDate}
+        <DateRangeCalendar
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(nextStartDate, nextEndDate) => {
+            setStartDate(nextStartDate);
+            setEndDate(nextEndDate);
+          }}
         />
 
         <View style={styles.summaryCard}>
@@ -551,14 +545,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 12,
     backgroundColor: '#E5E7EB',
-  },
-  input: {
-    backgroundColor: '#F5F7FB',
-    borderColor: '#DEE4EF',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
   },
   summaryCard: {
     backgroundColor: '#F8FAFC',
