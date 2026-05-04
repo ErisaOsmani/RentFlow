@@ -155,7 +155,7 @@ export default function OwnerHomeScreen({ navigation }) {
                   <Text style={styles.cardCity}>{item.city}</Text>
                 </View>
                 <View style={styles.priceBadge}>
-                  <Text style={styles.priceBadgeText}>${item.price}</Text>
+                  <Text style={styles.priceBadgeText}>${item.price} / month</Text>
                 </View>
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>

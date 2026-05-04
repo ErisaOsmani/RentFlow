@@ -114,7 +114,7 @@ export default function SearchScreen({ navigation }) {
         <View style={styles.cardTop}>
           <Text style={styles.cardTitle}>{item.title}</Text>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>${item.price}</Text>
+            <Text style={styles.priceBadgeText}>${item.price} / month</Text>
           </View>
         </View>
         <Text style={styles.cardCity}>{item.city}</Text>

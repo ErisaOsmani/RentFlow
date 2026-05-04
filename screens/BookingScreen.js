@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { supabase } from '../services/supabase';
+import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function BookingScreen({ route, navigation }) {
@@ -20,22 +21,8 @@ export default function BookingScreen({ route, navigation }) {
   const [end, setEnd] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const getNightCount = () => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return 0;
-    }
-
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    return days > 0 ? days : 0;
-  };
-
-  const nightCount = getNightCount();
-  const totalPrice = nightCount * Number(apartment.price || 0);
+  const monthCount = getBillingMonthCount(start, end);
+  const totalPrice = getMonthlyBookingTotal(apartment.price, start, end);
 
   const book = async () => {
     const normalizedStart = start.trim();
@@ -46,7 +33,7 @@ export default function BookingScreen({ route, navigation }) {
       return;
     }
 
-    if (!nightCount) {
+    if (!monthCount) {
       Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
       return;
     }
@@ -195,7 +182,7 @@ export default function BookingScreen({ route, navigation }) {
           </TouchableOpacity>
           <Text style={styles.eyebrow}>BOOKING</Text>
           <Text style={styles.title}>{apartment.title}</Text>
-          <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / night</Text>
+          <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / month</Text>
         </View>
 
         <View style={styles.card}>
@@ -211,8 +198,10 @@ export default function BookingScreen({ route, navigation }) {
           />
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Night stay</Text>
-            <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
+            <Text style={styles.summaryLabel}>Monthly stay</Text>
+            <Text style={styles.summaryValue}>
+              {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+            </Text>
             <Text style={styles.summaryLabel}>Estimated total</Text>
             <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
           </View>
