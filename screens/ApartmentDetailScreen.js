@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  TextInput,
   ActivityIndicator,
   Alert,
   Modal,
@@ -16,6 +15,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
+import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
+import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function ApartmentDetailScreen() {
   const navigation = useNavigation();
@@ -80,22 +81,8 @@ export default function ApartmentDetailScreen() {
     return () => clearTimeout(timeoutId);
   }, [viewerIndex, viewerVisible]);
 
-  const getNightCount = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      return 0;
-    }
-
-    const diffMs = end.getTime() - start.getTime();
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    return days > 0 ? days : 0;
-  };
-
-  const nightCount = getNightCount();
-  const totalPrice = nightCount * Number(apartment?.price || 0);
+  const monthCount = getBillingMonthCount(startDate, endDate);
+  const totalPrice = getMonthlyBookingTotal(apartment?.price, startDate, endDate);
 
   const openImageViewer = (index) => {
     setViewerIndex(index);
@@ -120,7 +107,7 @@ export default function ApartmentDetailScreen() {
       return;
     }
 
-    if (!nightCount) {
+    if (!monthCount) {
       Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
       return;
     }
@@ -157,6 +144,33 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      let guestProfile = null;
+      const guestProfileQueries = [
+        'first_name, last_name, phone',
+        'first_name, last_name',
+        'id',
+      ];
+
+      for (const selectFields of guestProfileQueries) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select(selectFields)
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (profileError?.code === '42703') {
+          continue;
+        }
+
+        if (profileError) {
+          Alert.alert('Gabim', profileError.message);
+          return;
+        }
+
+        guestProfile = profileData;
+        break;
+      }
+
       const { data: conflictingBookings, error: conflictError } = await supabase
         .from('bookings')
         .select('id, start_date, end_date')
@@ -179,13 +193,44 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
-      const { error } = await supabase.from('bookings').insert({
-        user_id: authData.user.id,
-        owner_id: ownerId,
-        apartment_id: apartment.id,
-        start_date: normalizedStart,
-        end_date: normalizedEnd,
-      });
+      const bookingPayloadOptions = [
+        {
+          user_id: authData.user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+          guest_first_name: guestProfile?.first_name || null,
+          guest_last_name: guestProfile?.last_name || null,
+          guest_phone: guestProfile?.phone || null,
+        },
+        {
+          user_id: authData.user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+        },
+      ];
+
+      let error = null;
+
+      for (const payload of bookingPayloadOptions) {
+        const result = await supabase.from('bookings').insert(payload);
+
+        if (!result.error) {
+          error = null;
+          break;
+        }
+
+        if (result.error.code === '42703') {
+          error = result.error;
+          continue;
+        }
+
+        error = result.error;
+        break;
+      }
 
       if (error) {
         Alert.alert('Gabim', error.message);
@@ -234,7 +279,7 @@ export default function ApartmentDetailScreen() {
           <Text style={styles.location}>{apartment.city}</Text>
         </View>
         <View style={styles.priceBadge}>
-          <Text style={styles.priceBadgeText}>${apartment.price}</Text>
+          <Text style={styles.priceBadgeText}>${apartment.price} / month</Text>
         </View>
       </View>
 
@@ -273,24 +318,20 @@ export default function ApartmentDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Book this apartment</Text>
-        <TextInput
-          placeholder="Start date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={startDate}
-          onChangeText={setStartDate}
-        />
-        <TextInput
-          placeholder="End date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={endDate}
-          onChangeText={setEndDate}
+        <DateRangeCalendar
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(nextStartDate, nextEndDate) => {
+            setStartDate(nextStartDate);
+            setEndDate(nextEndDate);
+          }}
         />
 
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Night stay</Text>
-          <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
+          <Text style={styles.summaryLabel}>Monthly stay</Text>
+          <Text style={styles.summaryValue}>
+            {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+          </Text>
           <Text style={styles.summaryLabel}>Estimated total</Text>
           <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
         </View>
@@ -494,14 +535,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     backgroundColor: '#E5E7EB',
   },
-  input: {
-    backgroundColor: '#F5F7FB',
-    borderColor: '#DEE4EF',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-  },
   summaryCard: {
     backgroundColor: '#F8FAFC',
     borderColor: '#DEE4EF',
@@ -601,3 +634,4 @@ const styles = StyleSheet.create({
     height: '78%',
   },
 });
+  

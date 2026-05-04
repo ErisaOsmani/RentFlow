@@ -44,11 +44,31 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return;
       }
 
-      const { data: bookingsByOwner, error: bookingsByOwnerError } = await supabase
-        .from('bookings')
-        .select('id, start_date, end_date, user_id, apartment_id')
-        .eq('owner_id', ownerId)
-        .order('start_date', { ascending: false });
+      const bookingSelectOptions = [
+        'id, start_date, end_date, user_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
+        'id, start_date, end_date, user_id, apartment_id',
+      ];
+
+      let bookingsByOwner = null;
+      let bookingsByOwnerError = null;
+      let bookingFields = bookingSelectOptions[bookingSelectOptions.length - 1];
+
+      for (const selectFields of bookingSelectOptions) {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(selectFields)
+          .eq('owner_id', ownerId)
+          .order('start_date', { ascending: false });
+
+        if (error?.code === '42703') {
+          continue;
+        }
+
+        bookingsByOwner = data;
+        bookingsByOwnerError = error;
+        bookingFields = selectFields;
+        break;
+      }
 
       if (bookingsByOwnerError && bookingsByOwnerError.code !== '42703') {
         Alert.alert('Gabim', bookingsByOwnerError.message);
@@ -61,7 +81,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         ? { data: null, error: null }
         : await supabase
             .from('bookings')
-            .select('id, start_date, end_date, user_id, apartment_id')
+            .select(bookingFields)
             .in('apartment_id', apartmentIds)
             .order('start_date', { ascending: false });
 
@@ -135,6 +155,35 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     return fullName || guest.email || 'Unknown guest';
   };
 
+  const getGuestNameFromBooking = (booking) => {
+    const bookingName = [booking.guest_first_name, booking.guest_last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    if (bookingName) {
+      return bookingName;
+    }
+
+    return getGuestName(booking.guest);
+  };
+
+  const getGuestPhone = (guest) => {
+    if (!guest?.phone) {
+      return 'Nuk ka numer';
+    }
+
+    return guest.phone;
+  };
+
+  const getGuestPhoneFromBooking = (booking) => {
+    if (booking.guest_phone) {
+      return booking.guest_phone;
+    }
+
+    return getGuestPhone(booking.guest);
+  };
+
   const renderBooking = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{item.apartment?.title || 'Unknown Apartment'}</Text>
@@ -147,8 +196,8 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         <Text style={styles.metaLabel}>To</Text>
         <Text style={styles.metaValue}>{item.end_date}</Text>
       </View>
-      <Text style={styles.guestNameLabel}>Guest: {getGuestName(item.guest)}</Text>
-      <Text style={styles.userIdLabel}>Phone: {item.guest?.phone || 'Nuk ka numer'}</Text>
+      <Text style={styles.guestNameLabel}>Emri dhe mbiemri: {getGuestNameFromBooking(item)}</Text>
+      <Text style={styles.userIdLabel}>Numri i telefonit: {getGuestPhoneFromBooking(item)}</Text>
     </View>
   );
 

@@ -15,6 +15,8 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 import { parseImageUrls } from '../utils/apartmentImages';
 
+const MAX_IMAGES = 10;
+
 export default function AddApartmentScreen({ navigation, route }) {
   const editingApartment = route?.params?.apartment;
   const storageBucket = process.env.EXPO_PUBLIC_SUPABASE_BUCKET || 'apartment-images';
@@ -47,6 +49,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES,
       quality: 0.8,
       base64: true,
     });
@@ -55,8 +58,14 @@ export default function AddApartmentScreen({ navigation, route }) {
       return;
     }
 
-    setPickedImages(result.assets);
-    setImageUrls(result.assets.map((asset) => asset.uri));
+    const selectedAssets = result.assets.slice(0, MAX_IMAGES);
+
+    if (result.assets.length > MAX_IMAGES) {
+      Alert.alert('Limit reached', `Mundesh me zgjedh maksimumi ${MAX_IMAGES} foto.`);
+    }
+
+    setPickedImages(selectedAssets);
+    setImageUrls(selectedAssets.map((asset) => asset.uri));
   };
 
   const removeImage = (indexToRemove) => {
@@ -110,6 +119,11 @@ export default function AddApartmentScreen({ navigation, route }) {
 
     if (Number.isNaN(parsedPrice) || Number.isNaN(parsedRooms)) {
       Alert.alert('Error', 'Price dhe rooms duhet te jene numra.');
+      return;
+    }
+
+    if (imageUrls.length > MAX_IMAGES) {
+      Alert.alert('Error', `Mundesh me shtu maksimumi ${MAX_IMAGES} foto.`);
       return;
     }
 
@@ -201,7 +215,9 @@ export default function AddApartmentScreen({ navigation, route }) {
         </TouchableOpacity>
         {imageUrls.length ? (
           <>
-            <Text style={styles.imageCountText}>{imageUrls.length} photo selected</Text>
+            <Text style={styles.imageCountText}>
+              {imageUrls.length} / {MAX_IMAGES} photos selected
+            </Text>
             <View style={styles.previewGrid}>
               {imageUrls.map((uri, index) => (
                 <View key={`${uri}-${index}`} style={styles.previewCard}>

@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { supabase } from '../services/supabase';
+import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
+import DateRangeCalendar from '../components/DateRangeCalendar';
 
 export default function BookingScreen({ route, navigation }) {
   const { apartment } = route.params;
@@ -19,22 +21,8 @@ export default function BookingScreen({ route, navigation }) {
   const [end, setEnd] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const getNightCount = () => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return 0;
-    }
-
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    return days > 0 ? days : 0;
-  };
-
-  const nightCount = getNightCount();
-  const totalPrice = nightCount * Number(apartment.price || 0);
+  const monthCount = getBillingMonthCount(start, end);
+  const totalPrice = getMonthlyBookingTotal(apartment.price, start, end);
 
   const book = async () => {
     const normalizedStart = start.trim();
@@ -45,7 +33,7 @@ export default function BookingScreen({ route, navigation }) {
       return;
     }
 
-    if (!nightCount) {
+    if (!monthCount) {
       Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
       return;
     }
@@ -82,6 +70,33 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
+      let guestProfile = null;
+      const guestProfileQueries = [
+        'first_name, last_name, phone',
+        'first_name, last_name',
+        'id',
+      ];
+
+      for (const selectFields of guestProfileQueries) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select(selectFields)
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError?.code === '42703') {
+          continue;
+        }
+
+        if (profileError) {
+          Alert.alert('Gabim', profileError.message);
+          return;
+        }
+
+        guestProfile = profileData;
+        break;
+      }
+
       const { data: conflictingBookings, error: conflictError } = await supabase
         .from('bookings')
         .select('id, start_date, end_date')
@@ -104,13 +119,44 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
-      const { error } = await supabase.from('bookings').insert({
-        user_id: user.id,
-        owner_id: ownerId,
-        apartment_id: apartment.id,
-        start_date: normalizedStart,
-        end_date: normalizedEnd,
-      });
+      const bookingPayloadOptions = [
+        {
+          user_id: user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+          guest_first_name: guestProfile?.first_name || null,
+          guest_last_name: guestProfile?.last_name || null,
+          guest_phone: guestProfile?.phone || null,
+        },
+        {
+          user_id: user.id,
+          owner_id: ownerId,
+          apartment_id: apartment.id,
+          start_date: normalizedStart,
+          end_date: normalizedEnd,
+        },
+      ];
+
+      let error = null;
+
+      for (const payload of bookingPayloadOptions) {
+        const result = await supabase.from('bookings').insert(payload);
+
+        if (!result.error) {
+          error = null;
+          break;
+        }
+
+        if (result.error.code === '42703') {
+          error = result.error;
+          continue;
+        }
+
+        error = result.error;
+        break;
+      }
 
       if (error) {
         Alert.alert('Gabim', error.message);
@@ -129,53 +175,50 @@ export default function BookingScreen({ route, navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.hero}>
-        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChipText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.eyebrow}>BOOKING</Text>
-        <Text style={styles.title}>{apartment.title}</Text>
-        <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / night</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Choose your stay</Text>
-
-        <TextInput
-          placeholder="Start date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={start}
-          onChangeText={setStart}
-        />
-
-        <TextInput
-          placeholder="End date (YYYY-MM-DD)"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={end}
-          onChangeText={setEnd}
-        />
-
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Night stay</Text>
-          <Text style={styles.summaryValue}>{nightCount || 0} nights</Text>
-          <Text style={styles.summaryLabel}>Estimated total</Text>
-          <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+            <Text style={styles.backChipText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.eyebrow}>BOOKING</Text>
+          <Text style={styles.title}>{apartment.title}</Text>
+          <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / month</Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={book}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Confirm Booking</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Choose your stay</Text>
+
+          <DateRangeCalendar
+            startDate={start}
+            endDate={end}
+            onChange={(nextStart, nextEnd) => {
+              setStart(nextStart);
+              setEnd(nextEnd);
+            }}
+          />
+
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Monthly stay</Text>
+            <Text style={styles.summaryValue}>
+              {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+            </Text>
+            <Text style={styles.summaryLabel}>Estimated total</Text>
+            <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={book}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Confirm Booking</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -183,8 +226,10 @@ export default function BookingScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#EEF1F7',
+  },
+  content: {
+    padding: 20,
   },
   hero: {
     backgroundColor: '#14213D',
@@ -234,14 +279,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 16,
-  },
-  input: {
-    backgroundColor: '#F5F7FB',
-    borderColor: '#DEE4EF',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
   },
   summaryCard: {
     backgroundColor: '#F8FAFC',
