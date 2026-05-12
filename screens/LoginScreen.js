@@ -81,7 +81,8 @@ export default function LoginScreen({ navigation }) {
         profile = { role: 'client', email: normalizedEmail };
       }
 
-      const targetScreen = profile?.role === 'owner' ? 'OwnerHome' : 'Home';
+      const targetScreen =
+        profile?.role === 'admin' ? 'AdminHome' : profile?.role === 'owner' ? 'OwnerHome' : 'Home';
 
       navigation.reset({
         index: 0,
