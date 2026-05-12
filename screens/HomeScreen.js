@@ -22,11 +22,29 @@ export default function HomeScreen({ navigation }) {
   const loadApartments = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('apartments')
-        .select('id, owner_id, title, city, description, image_url, price, rooms')
-        .order('city', { ascending: true })
-        .order('title', { ascending: true });
+      const selectOptions = [
+        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
+        'id, owner_id, title, city, description, image_url, price, rooms',
+      ];
+
+      let data = [];
+      let error = null;
+
+      for (const selectFields of selectOptions) {
+        const result = await supabase
+          .from('apartments')
+          .select(selectFields)
+          .order('city', { ascending: true })
+          .order('title', { ascending: true });
+
+        if (result.error?.code === '42703') {
+          continue;
+        }
+
+        data = result.data || [];
+        error = result.error;
+        break;
+      }
 
       if (error) {
         Alert.alert('Error', error.message);

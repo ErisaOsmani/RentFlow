@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,34 @@ export default function BookingScreen({ route, navigation }) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unavailableRanges, setUnavailableRanges] = useState([]);
 
   const monthCount = getBillingMonthCount(start, end);
   const totalPrice = getMonthlyBookingTotal(apartment.price, start, end);
+
+  const loadUnavailableRanges = useCallback(async () => {
+    if (!apartment?.id) {
+      setUnavailableRanges([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id, start_date, end_date')
+      .eq('apartment_id', apartment.id)
+      .order('start_date', { ascending: false });
+
+    if (error) {
+      Alert.alert('Gabim', error.message);
+      return;
+    }
+
+    setUnavailableRanges(data || []);
+  }, [apartment?.id]);
+
+  useEffect(() => {
+    loadUnavailableRanges();
+  }, [loadUnavailableRanges]);
 
   const book = async () => {
     const normalizedStart = start.trim();
@@ -191,6 +216,7 @@ export default function BookingScreen({ route, navigation }) {
           <DateRangeCalendar
             startDate={start}
             endDate={end}
+            unavailableRanges={unavailableRanges}
             onChange={(nextStart, nextEnd) => {
               setStart(nextStart);
               setEnd(nextEnd);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -36,7 +36,146 @@ export default function AddApartmentScreen({ navigation, route }) {
       ? String(editingApartment.rooms)
       : ''
   );
+  const [ownerName, setOwnerName] = useState(
+    editingApartment?.owner_name ||
+      [editingApartment?.owner?.first_name, editingApartment?.owner?.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+  );
+  const [ownerPhone, setOwnerPhone] = useState(
+    editingApartment?.owner_phone || editingApartment?.owner?.phone || ''
+  );
   const [loading, setLoading] = useState(false);
+
+  const loadOwnerContact = useCallback(async () => {
+    if (!editingApartment?.owner_id) {
+      return;
+    }
+
+    const ownerSelectOptions = [
+      'id, first_name, last_name, phone',
+      'id, first_name, last_name',
+      'id, phone',
+      'id',
+    ];
+
+    for (const selectFields of ownerSelectOptions) {
+      const { data, error } = await supabase
+        .from('users')
+        .select(selectFields)
+        .eq('id', editingApartment.owner_id)
+        .maybeSingle();
+
+      if (error?.code === '42703') {
+        continue;
+      }
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      const fullName = [data?.first_name, data?.last_name].filter(Boolean).join(' ').trim();
+      setOwnerName((current) => current || fullName);
+      setOwnerPhone((current) => current || data?.phone || '');
+      break;
+    }
+  }, [editingApartment?.owner_id]);
+
+  useEffect(() => {
+    loadOwnerContact();
+  }, [loadOwnerContact]);
+
+  const updateOwnerContact = async (ownerId) => {
+    const normalizedOwnerName = ownerName.trim();
+    const normalizedOwnerPhone = ownerPhone.trim();
+
+    if (!normalizedOwnerName && !normalizedOwnerPhone) {
+      return null;
+    }
+
+    const [firstName, ...lastNameParts] = normalizedOwnerName.split(/\s+/).filter(Boolean);
+    const namePayload = normalizedOwnerName
+      ? {
+          first_name: firstName || null,
+          last_name: lastNameParts.join(' ') || null,
+        }
+      : {};
+    const phonePayload = normalizedOwnerPhone ? { phone: normalizedOwnerPhone } : {};
+    const ownerPayloadOptions = [
+      {
+        ...namePayload,
+        ...phonePayload,
+      },
+      namePayload,
+      phonePayload,
+    ];
+    let updateMatchedNoRows = false;
+
+    for (const payload of ownerPayloadOptions) {
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined)
+      );
+
+      if (!Object.keys(cleanPayload).length) {
+        continue;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .update(cleanPayload)
+        .eq('id', ownerId)
+        .select('id')
+        .maybeSingle();
+
+      if (!error && data?.id) {
+        return null;
+      }
+
+      if (!error && !data?.id) {
+        updateMatchedNoRows = true;
+        continue;
+      }
+
+      if (error.code === '42703') {
+        continue;
+      }
+
+      return error;
+    }
+
+    return updateMatchedNoRows
+      ? { message: 'Kontakti i owner-it nuk u ruajt. Supabase nuk lejoi ndryshimin e profilit te owner-it.' }
+      : null;
+  };
+
+  const buildApartmentPayload = (
+    ownerId,
+    uploadedImageUrls,
+    parsedPriceValue,
+    parsedRoomsValue,
+    includeOwnerContact = true
+  ) => {
+    const normalizedOwnerName = ownerName.trim();
+    const normalizedOwnerPhone = ownerPhone.trim();
+    const payload = {
+      owner_id: ownerId,
+      title: title.trim(),
+      city: city.trim(),
+      description: description.trim(),
+      image_url: uploadedImageUrls.length ? JSON.stringify(uploadedImageUrls) : null,
+      price: parsedPriceValue,
+      rooms: parsedRoomsValue,
+    };
+
+    if (includeOwnerContact) {
+      payload.owner_name = normalizedOwnerName || null;
+      payload.owner_phone = normalizedOwnerPhone || null;
+    }
+
+    return payload;
+  };
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -154,21 +293,16 @@ export default function AddApartmentScreen({ navigation, route }) {
       }
 
       const uploadedImageUrls = await uploadPickedImages(authData.user.id);
-
-      const payload = {
-        owner_id: editingApartment?.owner_id || authData.user.id,
-        title: title.trim(),
-        city: city.trim(),
-        description: description.trim(),
-        image_url: uploadedImageUrls.length ? JSON.stringify(uploadedImageUrls) : null,
-        price: parsedPrice,
-        rooms: parsedRooms,
-      };
+      const ownerId = editingApartment?.owner_id || authData.user.id;
 
       let saveResult;
+      let savedOwnerContactOnApartment = true;
 
       if (editingApartment) {
-        let updateQuery = supabase.from('apartments').update(payload).eq('id', editingApartment.id);
+        let updateQuery = supabase
+          .from('apartments')
+          .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms))
+          .eq('id', editingApartment.id);
 
         if (!isAdmin) {
           updateQuery = updateQuery.eq('owner_id', authData.user.id);
@@ -176,13 +310,43 @@ export default function AddApartmentScreen({ navigation, route }) {
 
         saveResult = await updateQuery;
       } else {
-        saveResult = await supabase.from('apartments').insert([payload]);
+        saveResult = await supabase
+          .from('apartments')
+          .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms)]);
+      }
+
+      if (saveResult.error?.code === '42703') {
+        savedOwnerContactOnApartment = false;
+
+        if (editingApartment) {
+          let updateQuery = supabase
+            .from('apartments')
+            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false))
+            .eq('id', editingApartment.id);
+
+          if (!isAdmin) {
+            updateQuery = updateQuery.eq('owner_id', authData.user.id);
+          }
+
+          saveResult = await updateQuery;
+        } else {
+          saveResult = await supabase
+            .from('apartments')
+            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false)]);
+        }
       }
 
       const { error } = saveResult;
 
       if (error) {
         Alert.alert('Error', error.message);
+        return;
+      }
+
+      const ownerContactError = await updateOwnerContact(ownerId);
+
+      if (ownerContactError && !savedOwnerContactOnApartment) {
+        Alert.alert('Error', ownerContactError.message);
         return;
       }
 
@@ -273,6 +437,21 @@ export default function AddApartmentScreen({ navigation, route }) {
           onChangeText={setRooms}
           style={styles.input}
           keyboardType="numeric"
+        />
+        <TextInput
+          placeholder="Owner name"
+          placeholderTextColor="#8F97A8"
+          value={ownerName}
+          onChangeText={setOwnerName}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="Owner phone"
+          placeholderTextColor="#8F97A8"
+          value={ownerPhone}
+          onChangeText={setOwnerPhone}
+          style={styles.input}
+          keyboardType="phone-pad"
         />
 
         <TouchableOpacity

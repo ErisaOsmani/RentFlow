@@ -47,10 +47,28 @@ export default function BookingHistoryScreen({ navigation }) {
         return;
       }
 
-      const { data: apartments, error: apartmentsError } = await supabase
-        .from('apartments')
-        .select('id, owner_id, title, city, price, image_url')
-        .in('id', apartmentIds);
+      const apartmentSelectOptions = [
+        'id, owner_id, owner_name, owner_phone, title, city, price, image_url',
+        'id, owner_id, title, city, price, image_url',
+      ];
+
+      let apartments = [];
+      let apartmentsError = null;
+
+      for (const selectFields of apartmentSelectOptions) {
+        const result = await supabase
+          .from('apartments')
+          .select(selectFields)
+          .in('id', apartmentIds);
+
+        if (result.error?.code === '42703') {
+          continue;
+        }
+
+        apartments = result.data || [];
+        apartmentsError = result.error;
+        break;
+      }
 
       if (apartmentsError) {
         Alert.alert('Gabim', apartmentsError.message);
@@ -115,7 +133,7 @@ export default function BookingHistoryScreen({ navigation }) {
 
   const renderBooking = ({ item }) => {
     const imageUrl = getPrimaryImageUrl(item.apartment?.image_url);
-    const ownerPhone = item.owner?.phone;
+    const ownerPhone = item.apartment?.owner_phone || item.owner?.phone;
 
     return (
       <View style={styles.card}>

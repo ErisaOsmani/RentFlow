@@ -49,27 +49,47 @@ export default function SearchScreen({ navigation }) {
     try {
       setLoading(true);
 
-      let query = supabase
-        .from('apartments')
-        .select('id, owner_id, title, city, description, image_url, price, rooms');
+      const buildQuery = (selectFields) => {
+        let query = supabase.from('apartments').select(selectFields);
 
-      if (selectedCity) {
-        query = query.eq('city', selectedCity);
+        if (selectedCity) {
+          query = query.eq('city', selectedCity);
+        }
+
+        if (minPrice && !Number.isNaN(Number(minPrice))) {
+          query = query.gte('price', Number(minPrice));
+        }
+
+        if (maxPrice && !Number.isNaN(Number(maxPrice))) {
+          query = query.lte('price', Number(maxPrice));
+        }
+
+        if (minRooms && !Number.isNaN(Number(minRooms))) {
+          query = query.gte('rooms', Number(minRooms));
+        }
+
+        return query.order('price', { ascending: true });
+      };
+
+      const selectOptions = [
+        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
+        'id, owner_id, title, city, description, image_url, price, rooms',
+      ];
+
+      let data = [];
+      let error = null;
+
+      for (const selectFields of selectOptions) {
+        const result = await buildQuery(selectFields);
+
+        if (result.error?.code === '42703') {
+          continue;
+        }
+
+        data = result.data || [];
+        error = result.error;
+        break;
       }
-
-      if (minPrice && !Number.isNaN(Number(minPrice))) {
-        query = query.gte('price', Number(minPrice));
-      }
-
-      if (maxPrice && !Number.isNaN(Number(maxPrice))) {
-        query = query.lte('price', Number(maxPrice));
-      }
-
-      if (minRooms && !Number.isNaN(Number(minRooms))) {
-        query = query.gte('rooms', Number(minRooms));
-      }
-
-      const { data, error } = await query.order('price', { ascending: true });
 
       if (error) {
         Alert.alert('Gabim', error.message);

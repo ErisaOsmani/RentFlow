@@ -17,6 +17,7 @@ import { supabase } from '../services/supabase';
 import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
 import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
+import { openWhatsAppForPhone } from '../utils/whatsapp';
 
 export default function ApartmentDetailScreen() {
   const navigation = useNavigation();
@@ -33,6 +34,7 @@ export default function ApartmentDetailScreen() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentLoading, setRecentLoading] = useState(true);
+  const [ownerProfile, setOwnerProfile] = useState(null);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
@@ -48,8 +50,7 @@ export default function ApartmentDetailScreen() {
         .from('bookings')
         .select('id, start_date, end_date')
         .eq('apartment_id', apartment.id)
-        .order('start_date', { ascending: false })
-        .limit(3);
+        .order('start_date', { ascending: false });
 
       if (error) {
         Alert.alert('Gabim', error.message);
@@ -62,9 +63,47 @@ export default function ApartmentDetailScreen() {
     }
   }, [apartment?.id]);
 
+  const loadOwnerProfile = useCallback(async () => {
+    if (!apartment?.owner_id) {
+      setOwnerProfile(null);
+      return;
+    }
+
+    const ownerSelectOptions = [
+      'id, first_name, last_name, phone',
+      'id, first_name, last_name',
+      'id, phone',
+      'id',
+    ];
+
+    for (const selectFields of ownerSelectOptions) {
+      const { data, error } = await supabase
+        .from('users')
+        .select(selectFields)
+        .eq('id', apartment.owner_id)
+        .maybeSingle();
+
+      if (error?.code === '42703') {
+        continue;
+      }
+
+      if (error) {
+        Alert.alert('Gabim', error.message);
+        return;
+      }
+
+      setOwnerProfile(data || null);
+      break;
+    }
+  }, [apartment?.owner_id]);
+
   useEffect(() => {
     loadRecentBookings();
   }, [loadRecentBookings]);
+
+  useEffect(() => {
+    loadOwnerProfile();
+  }, [loadOwnerProfile]);
 
   useEffect(() => {
     if (!viewerVisible || !galleryListRef.current) {
@@ -83,6 +122,9 @@ export default function ApartmentDetailScreen() {
 
   const monthCount = getBillingMonthCount(startDate, endDate);
   const totalPrice = getMonthlyBookingTotal(apartment?.price, startDate, endDate);
+  const profileOwnerName = [ownerProfile?.first_name, ownerProfile?.last_name].filter(Boolean).join(' ').trim();
+  const ownerName = apartment?.owner_name || profileOwnerName;
+  const ownerPhone = apartment?.owner_phone || ownerProfile?.phone;
 
   const openImageViewer = (index) => {
     setViewerIndex(index);
@@ -299,6 +341,20 @@ export default function ApartmentDetailScreen() {
         <Text style={styles.description}>{apartment.description || 'No description provided.'}</Text>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Owner</Text>
+        <TouchableOpacity
+          style={styles.ownerContact}
+          onPress={() => openWhatsAppForPhone(ownerPhone)}
+          disabled={!ownerPhone}
+        >
+          <Text style={styles.ownerName}>{ownerName || 'Owner'}</Text>
+          <Text style={[styles.ownerPhone, !ownerPhone && styles.ownerPhoneDisabled]}>
+            {ownerPhone || 'Nuk ka numer'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {imageUrls.length > 1 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gallery</Text>
@@ -321,6 +377,7 @@ export default function ApartmentDetailScreen() {
         <DateRangeCalendar
           startDate={startDate}
           endDate={endDate}
+          unavailableRanges={recentBookings}
           onChange={(nextStartDate, nextEndDate) => {
             setStartDate(nextStartDate);
             setEndDate(nextEndDate);
@@ -354,7 +411,7 @@ export default function ApartmentDetailScreen() {
         {recentLoading ? (
           <ActivityIndicator color="#14213D" />
         ) : recentBookings.length ? (
-          recentBookings.map((booking) => (
+          recentBookings.slice(0, 3).map((booking) => (
             <View key={booking.id} style={styles.bookingItem}>
               <Text style={styles.metaLabel}>From</Text>
               <Text style={styles.metaValue}>{booking.start_date}</Text>
@@ -524,6 +581,26 @@ const styles = StyleSheet.create({
   description: {
     color: '#475569',
     lineHeight: 22,
+  },
+  ownerContact: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  ownerName: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  ownerPhone: {
+    color: '#FF5A5F',
+    fontWeight: '800',
+  },
+  ownerPhoneDisabled: {
+    color: '#94A3B8',
   },
   gallery: {
     flexDirection: 'row',

@@ -87,10 +87,28 @@ export default function AdminHomeScreen({ navigation }) {
         return;
       }
 
-      const { data: apartmentData, error: apartmentError } = await supabase
-        .from('apartments')
-        .select('id, owner_id, title, city, description, image_url, price, rooms')
-        .order('id', { ascending: false });
+      const apartmentSelectOptions = [
+        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
+        'id, owner_id, title, city, description, image_url, price, rooms',
+      ];
+
+      let apartmentData = [];
+      let apartmentError = null;
+
+      for (const selectFields of apartmentSelectOptions) {
+        const result = await supabase
+          .from('apartments')
+          .select(selectFields)
+          .order('id', { ascending: false });
+
+        if (result.error?.code === '42703') {
+          continue;
+        }
+
+        apartmentData = result.data || [];
+        apartmentError = result.error;
+        break;
+      }
 
       if (apartmentError) {
         Alert.alert('Gabim', apartmentError.message);
@@ -145,6 +163,8 @@ export default function AdminHomeScreen({ navigation }) {
         (bookingData || []).map((booking) => ({
           ...booking,
           apartment: apartmentMap[booking.apartment_id] || null,
+          apartment_id: booking.apartment_id || apartmentMap[booking.apartment_id]?.id,
+          owner_id: booking.owner_id || apartmentMap[booking.apartment_id]?.owner_id,
           guest: userMap[booking.user_id] || null,
           owner: userMap[booking.owner_id || apartmentMap[booking.apartment_id]?.owner_id] || null,
         }))
@@ -412,12 +432,15 @@ export default function AdminHomeScreen({ navigation }) {
             <Text style={styles.priceBadgeText}>{item.price ? `$${item.price}` : 'N/A'}</Text>
           </View>
         </View>
-        <Text style={styles.metaText}>Owner: {getUserName(item.owner, item.owner_id || 'Unknown owner')}</Text>
+        <Text style={styles.metaText}>
+          Owner: {item.owner_name || getUserName(item.owner, item.owner_id || 'Unknown owner')}
+        </Text>
         <Text style={styles.metaText}>{item.rooms || 0} rooms | Per month</Text>
         {isExpanded ? (
           <View style={styles.detailsPanel}>
             <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
             <Text style={styles.detailLine}>Apartment ID: {item.id}</Text>
+            <Text style={styles.detailLine}>Owner phone: {item.owner_phone || item.owner?.phone || 'Nuk ka numer'}</Text>
             <Text style={styles.detailLine}>Owner ID: {item.owner_id || 'N/A'}</Text>
             <View style={styles.actionsRow}>
               <TouchableOpacity
@@ -467,9 +490,10 @@ export default function AdminHomeScreen({ navigation }) {
         <Text style={styles.metaText}>Guest: {getBookingGuestName(item)}</Text>
         {isExpanded ? (
           <View style={styles.detailsPanel}>
-            <Text style={styles.detailLine}>Owner: {getUserName(item.owner, 'Unknown owner')}</Text>
+            <Text style={styles.detailLine}>Owner: {getUserName(item.owner, item.owner_id || 'Unknown owner')}</Text>
+            <Text style={styles.detailLine}>Owner ID: {item.owner_id || item.apartment?.owner_id || 'N/A'}</Text>
             <Text style={styles.detailLine}>Booking ID: {item.id}</Text>
-            <Text style={styles.detailLine}>Apartment ID: {item.apartment_id || 'N/A'}</Text>
+            <Text style={styles.detailLine}>Apartment ID: {item.apartment_id || item.apartment?.id || 'N/A'}</Text>
             <Text style={styles.detailLine}>Guest ID: {item.user_id || 'N/A'}</Text>
             <TouchableOpacity
               style={styles.secondaryButtonFull}

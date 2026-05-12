@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthNames = [
@@ -55,7 +55,7 @@ const getMonthDays = (monthDate) => {
   return days;
 };
 
-export default function DateRangeCalendar({ startDate, endDate, onChange }) {
+export default function DateRangeCalendar({ startDate, endDate, onChange, unavailableRanges = [] }) {
   const initialMonth = parseDateKey(startDate) || new Date();
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
@@ -63,6 +63,19 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
 
   const todayKey = toDateKey(new Date());
   const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth]);
+  const bookedRanges = useMemo(
+    () =>
+      unavailableRanges
+        .filter((range) => range?.start_date && range?.end_date)
+        .map((range) => ({ start: range.start_date, end: range.end_date })),
+    [unavailableRanges]
+  );
+
+  const isBookedDate = (dateKey) =>
+    bookedRanges.some((range) => dateKey >= range.start && dateKey < range.end);
+
+  const rangeHasBookedDate = (rangeStart, rangeEnd) =>
+    bookedRanges.some((range) => rangeStart < range.end && rangeEnd > range.start);
 
   const goToPreviousMonth = () => {
     setVisibleMonth(
@@ -79,6 +92,10 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
   const selectDate = (date) => {
     const nextDate = toDateKey(date);
 
+    if (isBookedDate(nextDate)) {
+      return;
+    }
+
     if (!startDate || (startDate && endDate) || nextDate < startDate) {
       onChange(nextDate, '');
       return;
@@ -86,6 +103,11 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
 
     if (nextDate === startDate) {
       onChange(startDate, '');
+      return;
+    }
+
+    if (rangeHasBookedDate(startDate, nextDate)) {
+      Alert.alert('Datat nuk jane te lira', 'Zgjidh nje periudhe qe nuk prek rezervimet ekzistuese.');
       return;
     }
 
@@ -132,7 +154,11 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
           }
 
           const dateKey = toDateKey(date);
-          const isDisabled = dateKey < todayKey;
+          const isBooked = isBookedDate(dateKey);
+          const wouldCrossBookedRange = Boolean(
+            startDate && !endDate && dateKey > startDate && rangeHasBookedDate(startDate, dateKey)
+          );
+          const isDisabled = Boolean(dateKey < todayKey || isBooked || wouldCrossBookedRange);
           const isStart = dateKey === startDate;
           const isEnd = dateKey === endDate;
           const isInRange = startDate && endDate && dateKey > startDate && dateKey < endDate;
@@ -143,6 +169,7 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
               style={[
                 styles.dayCell,
                 isInRange && styles.rangeDay,
+                isBooked && styles.bookedDay,
                 (isStart || isEnd) && styles.selectedDay,
                 isDisabled && styles.disabledDay,
               ]}
@@ -153,6 +180,7 @@ export default function DateRangeCalendar({ startDate, endDate, onChange }) {
                 style={[
                   styles.dayText,
                   isInRange && styles.rangeDayText,
+                  isBooked && styles.bookedDayText,
                   (isStart || isEnd) && styles.selectedDayText,
                   isDisabled && styles.disabledDayText,
                 ]}
@@ -255,6 +283,14 @@ const styles = StyleSheet.create({
   },
   rangeDayText: {
     color: '#B4232A',
+  },
+  bookedDay: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 10,
+  },
+  bookedDayText: {
+    color: '#64748B',
+    textDecorationLine: 'line-through',
   },
   selectedDay: {
     backgroundColor: '#FF5A5F',
