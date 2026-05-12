@@ -1,0 +1,15 @@
+  --non-interactive is not supported, use $CI=1 instead
+(node:3144) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+TypeError: fetch failed
+TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async fetchWithCredentials (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\api\rest\client.js:105:30)
+    at async cachedFetch (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\api\rest\cache\wrapFetchWithCache.js:35:30)
+    at async getNativeModuleVersionsAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\api\getNativeModuleVersions.js:19:22)
+    at async getVersionedNativeModulesAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\start\doctor\dependencies\bundledNativeModules.js:87:20)
+    at async getCombinedKnownVersionsAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\start\doctor\dependencies\getVersionedPackages.js:68:47)
+    at async mutatePackagesWithKnownVersionsAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\start\doctor\dependencies\getMissingPackages.js:94:29)
+    at async getMissingPackagesAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\start\doctor\dependencies\getMissingPackages.js:89:5)
+    at async ensureDependenciesAsync (C:\Users\user 2\Desktop\RentFlow\node_modules\expo\node_modules\@expo\cli\build\src\start\doctor\dependencies\ensureDependenciesAsync.js:95:25)

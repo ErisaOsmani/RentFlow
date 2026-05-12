@@ -207,11 +207,15 @@ export default function BookingScreen({ route, navigation }) {
           </TouchableOpacity>
           <Text style={styles.eyebrow}>BOOKING</Text>
           <Text style={styles.title}>{apartment.title}</Text>
-          <Text style={styles.subtitle}>{apartment.city} | ${apartment.price} / month</Text>
+          <Text style={styles.subtitle}>${apartment.price} / month</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Choose your stay</Text>
+          <View style={styles.locationBox}>
+            <Text style={styles.locationLabel}>City</Text>
+            <Text style={styles.locationValue}>{apartment.city || 'Pa qytet'}</Text>
+          </View>
 
           <DateRangeCalendar
             startDate={start}
@@ -305,6 +309,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 16,
+  },
+  locationBox: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  locationLabel: {
+    color: '#667085',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  locationValue: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
   },
   summaryCard: {
     backgroundColor: '#F8FAFC',

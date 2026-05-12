@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
+import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 
 export default function HomeScreen({ navigation }) {
   const [sections, setSections] = useState([]);
@@ -51,7 +52,16 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
-      const grouped = (data || []).reduce((acc, item) => {
+      const { bookedApartmentIds, error: bookedError } = await getActiveBookedApartmentIds();
+
+      if (bookedError) {
+        Alert.alert('Error', bookedError.message);
+        return;
+      }
+
+      const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
+
+      const grouped = availableApartments.reduce((acc, item) => {
         const city = item.city || 'Pa qytet';
         const existing = acc.find((section) => section.title === city);
 

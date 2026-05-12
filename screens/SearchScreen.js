@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
+import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 
 export default function SearchScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -38,7 +39,15 @@ export default function SearchScreen({ navigation }) {
         return;
       }
 
-      const uniqueCities = Array.from(new Set((data || []).map((item) => item.city).filter(Boolean)));
+      const { bookedApartmentIds, error: bookedError } = await getActiveBookedApartmentIds();
+
+      if (bookedError) {
+        Alert.alert('Gabim', bookedError.message);
+        return;
+      }
+
+      const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
+      const uniqueCities = Array.from(new Set(availableApartments.map((item) => item.city).filter(Boolean)));
       setCities(uniqueCities);
     } catch (err) {
       Alert.alert('Gabim', 'Dështoi ngarkim qyteteve.');
@@ -96,7 +105,14 @@ export default function SearchScreen({ navigation }) {
         return;
       }
 
-      let results = data || [];
+      const { bookedApartmentIds, error: bookedError } = await getActiveBookedApartmentIds();
+
+      if (bookedError) {
+        Alert.alert('Gabim', bookedError.message);
+        return;
+      }
+
+      let results = filterAvailableApartments(data, bookedApartmentIds);
 
       if (searchText.trim()) {
         const searchLower = searchText.toLowerCase();
