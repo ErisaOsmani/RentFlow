@@ -213,6 +213,13 @@ export default function SignUpScreen({ navigation }) {
           >
             <Text style={[styles.roleText, role === 'owner' && styles.roleTextActive]}>Owner</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.rolePill, role === 'admin' && styles.rolePillActive]}
+            onPress={() => setRole('admin')}
+          >
+            <Text style={[styles.roleText, role === 'admin' && styles.roleTextActive]}>Admin</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity

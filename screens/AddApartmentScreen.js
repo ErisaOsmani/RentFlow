@@ -136,10 +136,27 @@ export default function AddApartmentScreen({ navigation, route }) {
         return;
       }
 
+      let isAdmin = false;
+
+      if (editingApartment) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          Alert.alert('Error', profileError.message);
+          return;
+        }
+
+        isAdmin = profileData?.role === 'admin';
+      }
+
       const uploadedImageUrls = await uploadPickedImages(authData.user.id);
 
       const payload = {
-        owner_id: authData.user.id,
+        owner_id: editingApartment?.owner_id || authData.user.id,
         title: title.trim(),
         city: city.trim(),
         description: description.trim(),
@@ -148,13 +165,21 @@ export default function AddApartmentScreen({ navigation, route }) {
         rooms: parsedRooms,
       };
 
-      const { error } = editingApartment
-        ? await supabase
-            .from('apartments')
-            .update(payload)
-            .eq('id', editingApartment.id)
-            .eq('owner_id', authData.user.id)
-        : await supabase.from('apartments').insert([payload]);
+      let saveResult;
+
+      if (editingApartment) {
+        let updateQuery = supabase.from('apartments').update(payload).eq('id', editingApartment.id);
+
+        if (!isAdmin) {
+          updateQuery = updateQuery.eq('owner_id', authData.user.id);
+        }
+
+        saveResult = await updateQuery;
+      } else {
+        saveResult = await supabase.from('apartments').insert([payload]);
+      }
+
+      const { error } = saveResult;
 
       if (error) {
         Alert.alert('Error', error.message);
