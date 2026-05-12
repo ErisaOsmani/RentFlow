@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
+import { openWhatsAppForPhone } from '../utils/whatsapp';
 
 export default function OwnerBookingHistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -184,22 +185,35 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     return getGuestPhone(booking.guest);
   };
 
-  const renderBooking = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{item.apartment?.title || 'Unknown Apartment'}</Text>
-      <Text style={styles.cardCity}>{item.apartment?.city || 'Unknown city'}</Text>
-      <View style={styles.row}>
-        <Text style={styles.metaLabel}>From</Text>
-        <Text style={styles.metaValue}>{item.start_date}</Text>
+  const renderBooking = ({ item }) => {
+    const guestPhone = getGuestPhoneFromBooking(item);
+    const hasGuestPhone = guestPhone !== 'Nuk ka numer';
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{item.apartment?.title || 'Unknown Apartment'}</Text>
+        <Text style={styles.cardCity}>{item.apartment?.city || 'Unknown city'}</Text>
+        <View style={styles.row}>
+          <Text style={styles.metaLabel}>From</Text>
+          <Text style={styles.metaValue}>{item.start_date}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.metaLabel}>To</Text>
+          <Text style={styles.metaValue}>{item.end_date}</Text>
+        </View>
+        <Text style={styles.guestNameLabel}>Emri dhe mbiemri: {getGuestNameFromBooking(item)}</Text>
+        <TouchableOpacity
+          style={styles.phoneLink}
+          onPress={() => openWhatsAppForPhone(guestPhone)}
+          disabled={!hasGuestPhone}
+        >
+          <Text style={[styles.userIdLabel, !hasGuestPhone && styles.userIdLabelDisabled]}>
+            Numri i telefonit: {guestPhone}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.row}>
-        <Text style={styles.metaLabel}>To</Text>
-        <Text style={styles.metaValue}>{item.end_date}</Text>
-      </View>
-      <Text style={styles.guestNameLabel}>Emri dhe mbiemri: {getGuestNameFromBooking(item)}</Text>
-      <Text style={styles.userIdLabel}>Numri i telefonit: {getGuestPhoneFromBooking(item)}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -295,9 +309,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   userIdLabel: {
-    marginTop: 6,
-    color: '#667085',
+    color: '#16A34A',
     fontWeight: '700',
+  },
+  userIdLabelDisabled: {
+    color: '#667085',
+  },
+  phoneLink: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
   },
   guestNameLabel: {
     marginTop: 10,

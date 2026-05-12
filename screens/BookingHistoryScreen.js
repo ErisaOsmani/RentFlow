@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
+import { openWhatsAppForPhone } from '../utils/whatsapp';
 
 export default function BookingHistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ export default function BookingHistoryScreen({ navigation }) {
 
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')
-        .select('id, title, city, price, image_url')
+        .select('id, owner_id, title, city, price, image_url')
         .in('id', apartmentIds);
 
       if (apartmentsError) {
@@ -61,10 +62,44 @@ export default function BookingHistoryScreen({ navigation }) {
         return acc;
       }, {});
 
+      const ownerIds = [...new Set((apartments || []).map((apartment) => apartment.owner_id).filter(Boolean))];
+      let ownerMap = {};
+
+      if (ownerIds.length) {
+        const ownerQueries = [
+          'id, first_name, last_name, phone',
+          'id, first_name, last_name',
+          'id',
+        ];
+
+        for (const selectFields of ownerQueries) {
+          const { data: ownerData, error: ownerError } = await supabase
+            .from('users')
+            .select(selectFields)
+            .in('id', ownerIds);
+
+          if (ownerError?.code === '42703') {
+            continue;
+          }
+
+          if (ownerError) {
+            Alert.alert('Gabim', ownerError.message);
+            return;
+          }
+
+          ownerMap = (ownerData || []).reduce((acc, owner) => {
+            acc[owner.id] = owner;
+            return acc;
+          }, {});
+          break;
+        }
+      }
+
       setBookings(
         (bookingsData || []).map((booking) => ({
           ...booking,
           apartment: apartmentMap[booking.apartment_id] || null,
+          owner: ownerMap[apartmentMap[booking.apartment_id]?.owner_id] || null,
         }))
       );
     } finally {
@@ -80,6 +115,7 @@ export default function BookingHistoryScreen({ navigation }) {
 
   const renderBooking = ({ item }) => {
     const imageUrl = getPrimaryImageUrl(item.apartment?.image_url);
+    const ownerPhone = item.owner?.phone;
 
     return (
       <View style={styles.card}>
@@ -99,6 +135,16 @@ export default function BookingHistoryScreen({ navigation }) {
           <Text style={styles.metaLabel}>To</Text>
           <Text style={styles.metaValue}>{item.end_date}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.phoneLink}
+          onPress={() => openWhatsAppForPhone(ownerPhone)}
+          disabled={!ownerPhone}
+        >
+          <Text style={styles.phoneLabel}>Numri i owner-it</Text>
+          <Text style={[styles.phoneValue, !ownerPhone && styles.phoneValueDisabled]}>
+            {ownerPhone || 'Nuk ka numer'}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -212,6 +258,24 @@ const styles = StyleSheet.create({
   metaValue: {
     color: '#14213D',
     fontWeight: '700',
+  },
+  phoneLink: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 12,
+  },
+  phoneLabel: {
+    color: '#94A3B8',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  phoneValue: {
+    color: '#16A34A',
+    fontWeight: '800',
+  },
+  phoneValueDisabled: {
+    color: '#667085',
   },
   emptyState: {
     flex: 1,
