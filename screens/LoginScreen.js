@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { supabase } from '../services/supabase';
+import { registerForPushNotifications } from '../services/pushNotifications';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -83,6 +84,8 @@ export default function LoginScreen({ navigation }) {
 
       const targetScreen =
         profile?.role === 'admin' ? 'AdminHome' : profile?.role === 'owner' ? 'OwnerHome' : 'Home';
+
+      await registerForPushNotifications(userId);
 
       navigation.reset({
         index: 0,

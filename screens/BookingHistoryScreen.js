@@ -13,27 +13,50 @@ import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
+import { createNotification, getCurrentUser, updateBookingStatus } from '../services/sprintOne';
 
 export default function BookingHistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const { user, error: authError } = await getCurrentUser();
 
-      if (authError || !authData?.user) {
+      if (authError || !user) {
         Alert.alert('Gabim', 'Duhet te jesh i kycur per te pare rezervimet.' );
         navigation.goBack();
         return;
       }
 
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('id, start_date, end_date, apartment_id')
-        .eq('user_id', authData.user.id)
-        .order('start_date', { ascending: false });
+      setCurrentUserId(user.id);
+
+      const bookingSelectOptions = [
+        'id, start_date, end_date, status, owner_id, apartment_id',
+        'id, start_date, end_date, owner_id, apartment_id',
+        'id, start_date, end_date, apartment_id',
+      ];
+
+      let bookingsData = [];
+      let bookingsError = null;
+
+      for (const selectFields of bookingSelectOptions) {
+        const result = await supabase
+          .from('bookings')
+          .select(selectFields)
+          .eq('user_id', user.id)
+          .order('start_date', { ascending: false });
+
+        if (result.error?.code === '42703') {
+          continue;
+        }
+
+        bookingsData = result.data || [];
+        bookingsError = result.error;
+        break;
+      }
 
       if (bookingsError) {
         Alert.alert('Gabim', bookingsError.message);
@@ -153,6 +176,9 @@ export default function BookingHistoryScreen({ navigation }) {
           <Text style={styles.metaLabel}>To</Text>
           <Text style={styles.metaValue}>{item.end_date}</Text>
         </View>
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusText}>{item.status || 'pending'}</Text>
+        </View>
         <TouchableOpacity
           style={styles.phoneLink}
           onPress={() => openWhatsAppForPhone(ownerPhone)}
@@ -163,8 +189,46 @@ export default function BookingHistoryScreen({ navigation }) {
             {ownerPhone || 'Nuk ka numer'}
           </Text>
         </TouchableOpacity>
+        {!['cancelled', 'rejected'].includes(String(item.status || 'pending').toLowerCase()) ? (
+          <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelBooking(item)}>
+            <Text style={styles.cancelButtonText}>Cancel booking</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
+  };
+
+  const handleCancelBooking = (booking) => {
+    Alert.alert('Cancel booking', 'A je i sigurt qe do ta anulosh kete rezervim?', [
+      { text: 'Jo', style: 'cancel' },
+      {
+        text: 'Po, anulo',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await updateBookingStatus({
+            bookingId: booking.id,
+            status: 'cancelled',
+            cancelledBy: currentUserId,
+          });
+
+          if (error) {
+            Alert.alert('Gabim', error.message);
+            return;
+          }
+
+          await createNotification({
+            userId: booking.owner_id || booking.apartment?.owner_id,
+            title: 'Rezervimi u anulua',
+            message: `${booking.apartment?.title || 'Banesa'} u anulua nga klienti.`,
+            type: 'booking_cancelled',
+            bookingId: booking.id,
+            apartmentId: booking.apartment_id,
+          });
+
+          loadBookings();
+        },
+      },
+    ]);
   };
 
   return (
@@ -294,6 +358,30 @@ const styles = StyleSheet.create({
   },
   phoneValueDisabled: {
     color: '#667085',
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF1F7',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 6,
+  },
+  statusText: {
+    color: '#14213D',
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+  cancelButton: {
+    backgroundColor: '#FFE9EA',
+    borderRadius: 12,
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  cancelButtonText: {
+    color: '#D92D20',
+    fontWeight: '800',
   },
   emptyState: {
     flex: 1,

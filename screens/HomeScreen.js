@@ -142,6 +142,14 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.historyButtonText}>My bookings</Text>
           </TouchableOpacity>
         </View>
+        <View style={styles.heroButtons}>
+          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Favorites')}>
+            <Text style={styles.historyButtonText}>Saved</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Notifications')}>
+            <Text style={styles.historyButtonText}>Notifications</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SectionList

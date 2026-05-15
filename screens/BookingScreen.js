@@ -13,6 +13,12 @@ import {
 import { supabase } from '../services/supabase';
 import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
+import {
+  createBooking,
+  createNotification,
+  getBlockingBookings,
+  getCurrentUser,
+} from '../services/sprintOne';
 
 export default function BookingScreen({ route, navigation }) {
   const { apartment } = route.params;
@@ -33,16 +39,34 @@ export default function BookingScreen({ route, navigation }) {
 
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, start_date, end_date')
+      .select('id, start_date, end_date, status')
       .eq('apartment_id', apartment.id)
       .order('start_date', { ascending: false });
+
+    if (error?.code === '42703') {
+      const fallback = await supabase
+        .from('bookings')
+        .select('id, start_date, end_date')
+        .eq('apartment_id', apartment.id)
+        .order('start_date', { ascending: false });
+
+      if (fallback.error) {
+        Alert.alert('Gabim', fallback.error.message);
+        return;
+      }
+
+      setUnavailableRanges(fallback.data || []);
+      return;
+    }
 
     if (error) {
       Alert.alert('Gabim', error.message);
       return;
     }
 
-    setUnavailableRanges(data || []);
+    setUnavailableRanges((data || []).filter(
+      (booking) => !['cancelled', 'rejected'].includes(String(booking.status || 'accepted').toLowerCase())
+    ));
   }, [apartment?.id]);
 
   useEffect(() => {
@@ -66,7 +90,7 @@ export default function BookingScreen({ route, navigation }) {
     try {
       setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { user } = await getCurrentUser();
 
       if (!user) {
         Alert.alert('Gabim', 'Duhet te jesh i kycur per te bere rezervim.');
@@ -122,13 +146,11 @@ export default function BookingScreen({ route, navigation }) {
         break;
       }
 
-      const { data: conflictingBookings, error: conflictError } = await supabase
-        .from('bookings')
-        .select('id, start_date, end_date')
-        .eq('apartment_id', apartment.id)
-        .lt('start_date', normalizedEnd)
-        .gt('end_date', normalizedStart)
-        .limit(1);
+      const { bookings: conflictingBookings, error: conflictError } = await getBlockingBookings({
+        apartmentId: apartment.id,
+        startDate: normalizedStart,
+        endDate: normalizedEnd,
+      });
 
       if (conflictError) {
         Alert.alert('Gabim', conflictError.message);
@@ -144,51 +166,32 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
-      const bookingPayloadOptions = [
-        {
-          user_id: user.id,
-          owner_id: ownerId,
-          apartment_id: apartment.id,
-          start_date: normalizedStart,
-          end_date: normalizedEnd,
-          guest_first_name: guestProfile?.first_name || null,
-          guest_last_name: guestProfile?.last_name || null,
-          guest_phone: guestProfile?.phone || null,
-        },
-        {
-          user_id: user.id,
-          owner_id: ownerId,
-          apartment_id: apartment.id,
-          start_date: normalizedStart,
-          end_date: normalizedEnd,
-        },
-      ];
-
-      let error = null;
-
-      for (const payload of bookingPayloadOptions) {
-        const result = await supabase.from('bookings').insert(payload);
-
-        if (!result.error) {
-          error = null;
-          break;
-        }
-
-        if (result.error.code === '42703') {
-          error = result.error;
-          continue;
-        }
-
-        error = result.error;
-        break;
-      }
+      const { booking, error } = await createBooking({
+        user_id: user.id,
+        owner_id: ownerId,
+        apartment_id: apartment.id,
+        start_date: normalizedStart,
+        end_date: normalizedEnd,
+        guest_first_name: guestProfile?.first_name || null,
+        guest_last_name: guestProfile?.last_name || null,
+        guest_phone: guestProfile?.phone || null,
+      });
 
       if (error) {
         Alert.alert('Gabim', error.message);
         return;
       }
 
-      Alert.alert('Success', 'Booking successful!');
+      await createNotification({
+        userId: ownerId,
+        title: 'Rezervim i ri',
+        message: `${apartment.title} ka nje kerkese te re nga ${normalizedStart} deri me ${normalizedEnd}.`,
+        type: 'booking_created',
+        bookingId: booking?.id || null,
+        apartmentId: apartment.id,
+      });
+
+      Alert.alert('Success', 'Booking request sent!');
       navigation.goBack();
     } finally {
       setLoading(false);

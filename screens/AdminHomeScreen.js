@@ -116,7 +116,8 @@ export default function AdminHomeScreen({ navigation }) {
       }
 
       const bookingSelectOptions = [
-        'id, start_date, end_date, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
+        'id, start_date, end_date, status, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
+        'id, start_date, end_date, status, user_id, owner_id, apartment_id',
         'id, start_date, end_date, user_id, owner_id, apartment_id',
         'id, start_date, end_date, user_id, apartment_id',
       ];
@@ -445,7 +446,7 @@ export default function AdminHomeScreen({ navigation }) {
             <View style={styles.actionsRow}>
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => navigation.navigate('ApartmentDetail', { apartment: item })}
+                onPress={() => navigation.navigate('ApartmentDetail', { apartment: item, viewerRole: 'admin' })}
               >
                 <Text style={styles.secondaryButtonText}>Open</Text>
               </TouchableOpacity>
@@ -488,6 +489,7 @@ export default function AdminHomeScreen({ navigation }) {
           <Text style={styles.metaValue}>{item.end_date}</Text>
         </View>
         <Text style={styles.metaText}>Guest: {getBookingGuestName(item)}</Text>
+        <Text style={styles.metaText}>Status: {item.status || 'pending'}</Text>
         {isExpanded ? (
           <View style={styles.detailsPanel}>
             <Text style={styles.detailLine}>Owner: {getUserName(item.owner, item.owner_id || 'Unknown owner')}</Text>

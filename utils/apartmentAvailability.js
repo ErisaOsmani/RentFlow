@@ -10,17 +10,32 @@ const getLocalDateString = () => {
 };
 
 export const getActiveBookedApartmentIds = async (date = getLocalDateString()) => {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('apartment_id')
-    .lte('start_date', date)
-    .gt('end_date', date);
+  const selectOptions = ['apartment_id, status', 'apartment_id'];
+  let data = [];
+  let error = null;
+
+  for (const selectFields of selectOptions) {
+    const result = await supabase
+      .from('bookings')
+      .select(selectFields)
+      .lte('start_date', date)
+      .gt('end_date', date);
+
+    if (result.error?.code === '42703') {
+      continue;
+    }
+
+    data = result.data || [];
+    error = result.error;
+    break;
+  }
 
   if (error) {
     return { bookedApartmentIds: [], error };
   }
 
   const bookedApartmentIds = (data || [])
+    .filter((booking) => !['cancelled', 'rejected'].includes(String(booking.status || 'accepted').toLowerCase()))
     .map((booking) => booking.apartment_id)
     .filter(Boolean);
 

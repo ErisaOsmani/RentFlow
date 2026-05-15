@@ -143,6 +143,10 @@ export default function OwnerHomeScreen({ navigation }) {
         <Text style={styles.ownerActionButtonText}>View bookings</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Notifications')}>
+        <Text style={styles.ownerActionButtonText}>Notifications</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>My Apartments</Text>
 
       <FlatList

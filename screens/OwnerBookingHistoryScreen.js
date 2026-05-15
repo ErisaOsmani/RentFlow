@@ -11,10 +11,12 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
+import { createNotification, updateBookingStatus } from '../services/sprintOne';
 
 export default function OwnerBookingHistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
+  const [currentOwnerId, setCurrentOwnerId] = useState(null);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -27,6 +29,8 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         navigation.goBack();
         return;
       }
+
+      setCurrentOwnerId(ownerId);
 
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')
@@ -46,7 +50,8 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       }
 
       const bookingSelectOptions = [
-        'id, start_date, end_date, user_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
+        'id, start_date, end_date, status, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
+        'id, start_date, end_date, status, user_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
         'id, start_date, end_date, user_id, apartment_id',
       ];
 
@@ -133,6 +138,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
 
       setBookings((bookingsData || []).map((booking) => ({
         ...booking,
+        owner_id: booking.owner_id || ownerId,
         apartment: apartmentMap[booking.apartment_id] || null,
         guest: guestMap[booking.user_id] || null,
       })));
@@ -188,6 +194,9 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
   const renderBooking = ({ item }) => {
     const guestPhone = getGuestPhoneFromBooking(item);
     const hasGuestPhone = guestPhone !== 'Nuk ka numer';
+    const status = String(item.status || 'pending').toLowerCase();
+    const canDecide = status === 'pending';
+    const canCancel = !['cancelled', 'rejected'].includes(status);
 
     return (
       <View style={styles.card}>
@@ -201,6 +210,9 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
           <Text style={styles.metaLabel}>To</Text>
           <Text style={styles.metaValue}>{item.end_date}</Text>
         </View>
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusText}>{item.status || 'pending'}</Text>
+        </View>
         <Text style={styles.guestNameLabel}>Emri dhe mbiemri: {getGuestNameFromBooking(item)}</Text>
         <TouchableOpacity
           style={styles.phoneLink}
@@ -211,8 +223,55 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
             Numri i telefonit: {guestPhone}
           </Text>
         </TouchableOpacity>
+        {canDecide ? (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity style={styles.acceptButton} onPress={() => handleStatusChange(item, 'accepted')}>
+              <Text style={styles.acceptButtonText}>Accept</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.rejectButton} onPress={() => handleStatusChange(item, 'rejected')}>
+              <Text style={styles.rejectButtonText}>Reject</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        {canCancel ? (
+          <TouchableOpacity style={styles.cancelButton} onPress={() => handleStatusChange(item, 'cancelled')}>
+            <Text style={styles.rejectButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
+  };
+
+  const handleStatusChange = (booking, status) => {
+    Alert.alert('Ndrysho statusin', `Ta ndryshoj rezervimin ne ${status}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Save',
+        onPress: async () => {
+          const { error } = await updateBookingStatus({
+            bookingId: booking.id,
+            status,
+            cancelledBy: status === 'cancelled' ? currentOwnerId : null,
+          });
+
+          if (error) {
+            Alert.alert('Gabim', error.message);
+            return;
+          }
+
+          await createNotification({
+            userId: booking.user_id,
+            title: 'Statusi i rezervimit ndryshoi',
+            message: `${booking.apartment?.title || 'Rezervimi'} eshte ${status}.`,
+            type: `booking_${status}`,
+            bookingId: booking.id,
+            apartmentId: booking.apartment_id,
+          });
+
+          loadBookings();
+        },
+      },
+    ]);
   };
 
   return (
@@ -318,6 +377,53 @@ const styles = StyleSheet.create({
   phoneLink: {
     alignSelf: 'flex-start',
     marginTop: 6,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF1F7',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 6,
+  },
+  statusText: {
+    color: '#14213D',
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  acceptButtonText: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
+  rejectButton: {
+    flex: 1,
+    backgroundColor: '#FFE9EA',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  rejectButtonText: {
+    color: '#D92D20',
+    fontWeight: '800',
+  },
+  cancelButton: {
+    backgroundColor: '#FFE9EA',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
   },
   guestNameLabel: {
     marginTop: 10,

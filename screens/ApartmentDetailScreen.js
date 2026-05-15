@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  TextInput,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -18,11 +19,22 @@ import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
 import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
+import {
+  createBooking,
+  createNotification,
+  getBlockingBookings,
+  getCurrentUser,
+  loadFavoriteApartmentIds,
+  loadReviewData,
+  submitApartmentReview,
+  toggleFavorite,
+} from '../services/sprintOne';
 
 export default function ApartmentDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const apartment = route.params?.apartment;
+  const routeViewerRole = route.params?.viewerRole || null;
 
   const imageUrls = useMemo(() => parseImageUrls(apartment?.image_url), [apartment?.image_url]);
   const heroImage = imageUrls[0] || getPrimaryImageUrl(apartment?.image_url);
@@ -37,6 +49,14 @@ export default function ApartmentDetailScreen() {
   const [ownerProfile, setOwnerProfile] = useState(null);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteUnavailable, setFavoriteUnavailable] = useState(false);
+  const [reviewData, setReviewData] = useState({ reviews: [], averageRating: 0, reviewCount: 0 });
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [viewerRole, setViewerRole] = useState(routeViewerRole);
+  const isAdminView = viewerRole === 'admin';
 
   const loadRecentBookings = useCallback(async () => {
     if (!apartment?.id) {
@@ -48,16 +68,34 @@ export default function ApartmentDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('id, start_date, end_date')
+        .select('id, start_date, end_date, status')
         .eq('apartment_id', apartment.id)
         .order('start_date', { ascending: false });
+
+      if (error?.code === '42703') {
+        const fallback = await supabase
+          .from('bookings')
+          .select('id, start_date, end_date')
+          .eq('apartment_id', apartment.id)
+          .order('start_date', { ascending: false });
+
+        if (fallback.error) {
+          Alert.alert('Gabim', fallback.error.message);
+          return;
+        }
+
+        setRecentBookings(fallback.data || []);
+        return;
+      }
 
       if (error) {
         Alert.alert('Gabim', error.message);
         return;
       }
 
-      setRecentBookings(data || []);
+      setRecentBookings((data || []).filter(
+        (booking) => !['cancelled', 'rejected'].includes(String(booking.status || 'accepted').toLowerCase())
+      ));
     } finally {
       setRecentLoading(false);
     }
@@ -98,12 +136,84 @@ export default function ApartmentDetailScreen() {
   }, [apartment?.owner_id]);
 
   useEffect(() => {
-    loadRecentBookings();
-  }, [loadRecentBookings]);
+    if (!isAdminView) {
+      loadRecentBookings();
+    }
+  }, [isAdminView, loadRecentBookings]);
 
   useEffect(() => {
     loadOwnerProfile();
   }, [loadOwnerProfile]);
+
+  const loadFavoriteState = useCallback(async () => {
+    if (!apartment?.id) {
+      return;
+    }
+
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      return;
+    }
+
+    const { favoriteApartmentIds, unavailable } = await loadFavoriteApartmentIds(user.id);
+    setFavoriteUnavailable(unavailable);
+    setFavorite(favoriteApartmentIds.map(String).includes(String(apartment.id)));
+  }, [apartment?.id]);
+
+  const loadReviews = useCallback(async () => {
+    if (!apartment?.id) {
+      return;
+    }
+
+    const result = await loadReviewData(apartment.id);
+    setReviewData(result);
+  }, [apartment?.id]);
+
+  useEffect(() => {
+    if (!isAdminView) {
+      loadFavoriteState();
+    }
+  }, [isAdminView, loadFavoriteState]);
+
+  useEffect(() => {
+    if (!isAdminView) {
+      loadReviews();
+    }
+  }, [isAdminView, loadReviews]);
+
+  useEffect(() => {
+    if (routeViewerRole) {
+      setViewerRole(routeViewerRole);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadViewerRole = async () => {
+      const { user } = await getCurrentUser();
+
+      if (!user) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!error && isMounted) {
+        setViewerRole(data?.role || null);
+      }
+    };
+
+    loadViewerRole();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [routeViewerRole]);
 
   useEffect(() => {
     if (!viewerVisible || !galleryListRef.current) {
@@ -157,9 +267,9 @@ export default function ApartmentDetailScreen() {
     try {
       setBookingLoading(true);
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const { user, error: authError } = await getCurrentUser();
 
-      if (authError || !authData?.user) {
+      if (authError || !user) {
         Alert.alert('Gabim', 'Duhet te jesh i kycur per te bere rezervim.');
         return;
       }
@@ -197,7 +307,7 @@ export default function ApartmentDetailScreen() {
         const { data: profileData, error: profileError } = await supabase
           .from('users')
           .select(selectFields)
-          .eq('id', authData.user.id)
+          .eq('id', user.id)
           .maybeSingle();
 
         if (profileError?.code === '42703') {
@@ -213,13 +323,11 @@ export default function ApartmentDetailScreen() {
         break;
       }
 
-      const { data: conflictingBookings, error: conflictError } = await supabase
-        .from('bookings')
-        .select('id, start_date, end_date')
-        .eq('apartment_id', apartment.id)
-        .lt('start_date', normalizedEnd)
-        .gt('end_date', normalizedStart)
-        .limit(1);
+      const { bookings: conflictingBookings, error: conflictError } = await getBlockingBookings({
+        apartmentId: apartment.id,
+        startDate: normalizedStart,
+        endDate: normalizedEnd,
+      });
 
       if (conflictError) {
         Alert.alert('Gabim', conflictError.message);
@@ -235,56 +343,99 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
-      const bookingPayloadOptions = [
-        {
-          user_id: authData.user.id,
-          owner_id: ownerId,
-          apartment_id: apartment.id,
-          start_date: normalizedStart,
-          end_date: normalizedEnd,
-          guest_first_name: guestProfile?.first_name || null,
-          guest_last_name: guestProfile?.last_name || null,
-          guest_phone: guestProfile?.phone || null,
-        },
-        {
-          user_id: authData.user.id,
-          owner_id: ownerId,
-          apartment_id: apartment.id,
-          start_date: normalizedStart,
-          end_date: normalizedEnd,
-        },
-      ];
-
-      let error = null;
-
-      for (const payload of bookingPayloadOptions) {
-        const result = await supabase.from('bookings').insert(payload);
-
-        if (!result.error) {
-          error = null;
-          break;
-        }
-
-        if (result.error.code === '42703') {
-          error = result.error;
-          continue;
-        }
-
-        error = result.error;
-        break;
-      }
+      const { booking, error } = await createBooking({
+        user_id: user.id,
+        owner_id: ownerId,
+        apartment_id: apartment.id,
+        start_date: normalizedStart,
+        end_date: normalizedEnd,
+        guest_first_name: guestProfile?.first_name || null,
+        guest_last_name: guestProfile?.last_name || null,
+        guest_phone: guestProfile?.phone || null,
+      });
 
       if (error) {
         Alert.alert('Gabim', error.message);
         return;
       }
 
-      Alert.alert('Success', 'Booking successful!');
+      await createNotification({
+        userId: ownerId,
+        title: 'Rezervim i ri',
+        message: `${apartment.title} ka nje kerkese te re nga ${normalizedStart} deri me ${normalizedEnd}.`,
+        type: 'booking_created',
+        bookingId: booking?.id || null,
+        apartmentId: apartment.id,
+      });
+
+      Alert.alert('Success', 'Booking request sent!');
       setStartDate('');
       setEndDate('');
       loadRecentBookings();
     } finally {
       setBookingLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      Alert.alert('Gabim', 'Duhet te jesh i kycur per favorites.');
+      return;
+    }
+
+    const result = await toggleFavorite({
+      userId: user.id,
+      apartmentId: apartment.id,
+      isFavorite: favorite,
+    });
+
+    if (result.error) {
+      Alert.alert('Gabim', result.error.message);
+      return;
+    }
+
+    if (favoriteUnavailable) {
+      Alert.alert('Info', 'Ekzekuto supabase_sprint1.sql per me aktivizu favorites.');
+      return;
+    }
+
+    setFavorite(result.isFavorite);
+  };
+
+  const handleSubmitReview = async () => {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      Alert.alert('Gabim', 'Duhet te jesh i kycur per review.');
+      return;
+    }
+
+    try {
+      setReviewLoading(true);
+      const { error } = await submitApartmentReview({
+        userId: user.id,
+        apartmentId: apartment.id,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+
+      if (error) {
+        Alert.alert('Gabim', error.message);
+        return;
+      }
+
+      if (reviewData.unavailable) {
+        Alert.alert('Info', 'Ekzekuto supabase_sprint1.sql per me aktivizu reviews.');
+        return;
+      }
+
+      setReviewComment('');
+      await loadReviews();
+      Alert.alert('Success', 'Review u ruajt.');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -319,16 +470,31 @@ export default function ApartmentDetailScreen() {
         <View style={styles.headline}>
           <Text style={styles.title}>{apartment.title}</Text>
           <Text style={styles.location}>{apartment.city}</Text>
+          {!isAdminView ? (
+            <Text style={styles.ratingText}>
+              {reviewData.reviewCount
+                ? `${reviewData.averageRating.toFixed(1)} / 5 (${reviewData.reviewCount} reviews)`
+                : 'No reviews yet'}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.priceBadge}>
           <Text style={styles.priceBadgeText}>${apartment.price} / month</Text>
         </View>
       </View>
 
+      {!isAdminView ? (
+        <TouchableOpacity style={styles.favoriteButton} onPress={handleToggleFavorite}>
+          <Text style={styles.favoriteButtonText}>
+            {favorite ? 'Saved apartment' : 'Save apartment'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
       <View style={styles.metaRow}>
         <View style={[styles.metaChip, styles.metaChipMarginRight]}>
           <Text style={styles.metaLabel}>Rooms</Text>
-          <Text style={styles.metaValue}>{apartment.rooms || '—'}</Text>
+          <Text style={styles.metaValue}>{apartment.rooms || '-'}</Text>
         </View>
         <View style={styles.metaChip}>
           <Text style={styles.metaLabel}>Type</Text>
@@ -372,57 +538,103 @@ export default function ApartmentDetailScreen() {
         </View>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Book this apartment</Text>
-        <DateRangeCalendar
-          startDate={startDate}
-          endDate={endDate}
-          unavailableRanges={recentBookings}
-          onChange={(nextStartDate, nextEndDate) => {
-            setStartDate(nextStartDate);
-            setEndDate(nextEndDate);
-          }}
-        />
+      {!isAdminView ? (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Book this apartment</Text>
+            <DateRangeCalendar
+              startDate={startDate}
+              endDate={endDate}
+              unavailableRanges={recentBookings}
+              onChange={(nextStartDate, nextEndDate) => {
+                setStartDate(nextStartDate);
+                setEndDate(nextEndDate);
+              }}
+            />
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Monthly stay</Text>
-          <Text style={styles.summaryValue}>
-            {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
-          </Text>
-          <Text style={styles.summaryLabel}>Estimated total</Text>
-          <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.bookButton, bookingLoading && styles.bookButtonDisabled]}
-          onPress={handleBook}
-          disabled={bookingLoading}
-        >
-          {bookingLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.bookButtonText}>Confirm booking</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent bookings</Text>
-        {recentLoading ? (
-          <ActivityIndicator color="#14213D" />
-        ) : recentBookings.length ? (
-          recentBookings.slice(0, 3).map((booking) => (
-            <View key={booking.id} style={styles.bookingItem}>
-              <Text style={styles.metaLabel}>From</Text>
-              <Text style={styles.metaValue}>{booking.start_date}</Text>
-              <Text style={[styles.metaLabel, styles.bookingToLabel]}>To</Text>
-              <Text style={styles.metaValue}>{booking.end_date}</Text>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Monthly stay</Text>
+              <Text style={styles.summaryValue}>
+                {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+              </Text>
+              <Text style={styles.summaryLabel}>Estimated total</Text>
+              <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
             </View>
-          ))
-        ) : (
-          <Text style={styles.description}>No recent bookings for this apartment.</Text>
-        )}
-      </View>
+
+            <TouchableOpacity
+              style={[styles.bookButton, bookingLoading && styles.bookButtonDisabled]}
+              onPress={handleBook}
+              disabled={bookingLoading}
+            >
+              {bookingLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.bookButtonText}>Confirm booking</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent bookings</Text>
+            {recentLoading ? (
+              <ActivityIndicator color="#14213D" />
+            ) : recentBookings.length ? (
+              recentBookings.slice(0, 3).map((booking) => (
+                <View key={booking.id} style={styles.bookingItem}>
+                  <Text style={styles.metaLabel}>From</Text>
+                  <Text style={styles.metaValue}>{booking.start_date}</Text>
+                  <Text style={[styles.metaLabel, styles.bookingToLabel]}>To</Text>
+                  <Text style={styles.metaValue}>{booking.end_date}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.description}>No recent bookings for this apartment.</Text>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            <View style={styles.ratingRow}>
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <TouchableOpacity
+                  key={rating}
+                  style={[styles.ratingPill, reviewRating === rating && styles.ratingPillActive]}
+                  onPress={() => setReviewRating(rating)}
+                >
+                  <Text style={[styles.ratingPillText, reviewRating === rating && styles.ratingPillTextActive]}>
+                    {rating}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              placeholder="Write a short review"
+              placeholderTextColor="#8F97A8"
+              style={styles.reviewInput}
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              multiline
+            />
+            <TouchableOpacity
+              style={[styles.reviewButton, reviewLoading && styles.bookButtonDisabled]}
+              onPress={handleSubmitReview}
+              disabled={reviewLoading}
+            >
+              {reviewLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.bookButtonText}>Submit review</Text>
+              )}
+            </TouchableOpacity>
+            {reviewData.reviews?.slice(0, 3).map((review) => (
+              <View key={review.id} style={styles.reviewItem}>
+                <Text style={styles.metaValue}>{review.rating} / 5</Text>
+                <Text style={styles.description}>{review.comment || 'No comment.'}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <Modal
         visible={viewerVisible}
@@ -527,6 +739,11 @@ const styles = StyleSheet.create({
     color: '#667085',
     fontSize: 16,
   },
+  ratingText: {
+    color: '#14213D',
+    fontWeight: '800',
+    marginTop: 8,
+  },
   priceBadge: {
     backgroundColor: '#FFE9EA',
     borderRadius: 999,
@@ -535,6 +752,19 @@ const styles = StyleSheet.create({
   },
   priceBadgeText: {
     color: '#FF5A5F',
+    fontWeight: '800',
+  },
+  favoriteButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D2D8E3',
+    borderWidth: 1,
+    borderRadius: 16,
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginBottom: 18,
+  },
+  favoriteButtonText: {
+    color: '#14213D',
     fontWeight: '800',
   },
   metaRow: {
@@ -656,6 +886,54 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  ratingPill: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  ratingPillActive: {
+    backgroundColor: '#14213D',
+    borderColor: '#14213D',
+  },
+  ratingPillText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  ratingPillTextActive: {
+    color: '#FFFFFF',
+  },
+  reviewInput: {
+    minHeight: 90,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  reviewButton: {
+    backgroundColor: '#FF5A5F',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  reviewItem: {
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 12,
+    marginTop: 10,
   },
   bookingToLabel: {
     marginTop: 10,

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { supabase } from '../services/supabase';
+import { registerForPushNotifications } from '../services/pushNotifications';
 
 export default function SignUpScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
@@ -124,6 +125,8 @@ export default function SignUpScreen({ navigation }) {
         Alert.alert('Error', insertError.message);
         return;
       }
+
+      await registerForPushNotifications(user.id);
 
       Alert.alert('Success', 'Account created! Please login.');
       navigation.navigate('Login');
