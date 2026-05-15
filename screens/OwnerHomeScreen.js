@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
+import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
+import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
+import { registerForPushNotifications } from '../services/pushNotifications';
 
 export default function OwnerHomeScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const loadApartments = useCallback(async () => {
     try {
@@ -28,10 +32,7 @@ export default function OwnerHomeScreen({ navigation }) {
         return;
       }
 
-      const selectOptions = [
-        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
-        'id, owner_id, title, city, description, image_url, price, rooms',
-      ];
+      const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
       let error = null;
@@ -88,6 +89,70 @@ export default function OwnerHomeScreen({ navigation }) {
       loadApartments();
     }, [loadApartments])
   );
+
+  const loadUnreadMessages = useCallback(async () => {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      return;
+    }
+
+    await registerForPushNotifications(user.id);
+
+    const { count, error } = await loadUnreadNotificationCount(user.id, 'chat_message');
+
+    if (!error) {
+      setUnreadMessages(count);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUnreadMessages();
+    }, [loadUnreadMessages])
+  );
+
+  useEffect(() => {
+    let channel = null;
+    let mounted = true;
+
+    const subscribeToNotifications = async () => {
+      const { user } = await getCurrentUser();
+
+      if (!mounted || !user) {
+        return;
+      }
+
+      channel = supabase
+        .channel(`owner-chat-notifications-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const nextType = payload.new?.type || payload.old?.type;
+
+            if (nextType === 'chat_message') {
+              loadUnreadMessages();
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    subscribeToNotifications();
+
+    return () => {
+      mounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [loadUnreadMessages]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
@@ -147,6 +212,19 @@ export default function OwnerHomeScreen({ navigation }) {
         <Text style={styles.ownerActionButtonText}>Notifications</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Messages')}>
+        {unreadMessages > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+          </View>
+        ) : null}
+        <Text style={styles.ownerActionButtonText}>Messages</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Profile')}>
+        <Text style={styles.ownerActionButtonText}>Profile verification</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>My Apartments</Text>
 
       <FlatList
@@ -182,6 +260,11 @@ export default function OwnerHomeScreen({ navigation }) {
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
               <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+              <View style={styles.amenitiesRow}>
+                {getAmenityLabels(item).slice(0, 4).map((label) => (
+                  <Text key={label} style={styles.amenityText}>{label}</Text>
+                ))}
+              </View>
               <View style={styles.actionsRow}>
                 <TouchableOpacity
                   style={styles.secondaryButton}
@@ -275,11 +358,32 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginBottom: 18,
+    position: 'relative',
   },
   ownerActionButtonText: {
     color: '#14213D',
     fontWeight: '800',
     fontSize: 16,
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: 14,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF5A5F',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    zIndex: 2,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
   sectionTitle: {
     fontSize: 20,
@@ -346,6 +450,23 @@ const styles = StyleSheet.create({
     color: '#14213D',
     marginTop: 12,
     fontWeight: '700',
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  amenityText: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    color: '#14213D',
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   actionsRow: {
     flexDirection: 'row',

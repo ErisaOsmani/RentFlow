@@ -14,6 +14,9 @@ import OwnerBookingHistoryScreen from '../screens/OwnerBookingHistoryScreen';
 import SearchScreen from '../screens/SearchScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import ChatScreen from '../screens/ChatScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import MessagesScreen from '../screens/MessagesScreen';
 
 import AddApartmentScreen from '../screens/AddApartmentScreen';
 import ApartmentDetailScreen from '../screens/ApartmentDetailScreen';
@@ -33,6 +36,9 @@ export default function AppNavigator() {
         <Stack.Screen name="Search" component={SearchScreen} />
         <Stack.Screen name="Favorites" component={FavoritesScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Messages" component={MessagesScreen} />
         <Stack.Screen name="ApartmentDetail" component={ApartmentDetailScreen} />
         <Stack.Screen name="Booking" component={BookingScreen} />
         <Stack.Screen name="BookingHistory" component={BookingHistoryScreen} />

@@ -87,6 +87,8 @@ export default function SignUpScreen({ navigation }) {
           first_name: normalizedFirstName,
           last_name: normalizedLastName,
           phone: normalizedPhone,
+          verified: false,
+          verification_status: 'pending',
         },
         {
           id: user.id,

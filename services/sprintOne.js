@@ -58,11 +58,42 @@ export const loadNotifications = async (userId) => {
   return { notifications: data || [], error, unavailable: false };
 };
 
+export const loadUnreadNotificationCount = async (userId, type = null) => {
+  let query = supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null);
+
+  if (type) {
+    query = query.eq('type', type);
+  }
+
+  const { count, error } = await query;
+
+  if (isMissingSchemaError(error)) {
+    return { count: 0, error: null, unavailable: true };
+  }
+
+  return { count: count || 0, error, unavailable: false };
+};
+
 export const markNotificationRead = async (notificationId) => {
   const { error } = await supabase
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('id', notificationId);
+
+  return { error: isMissingSchemaError(error) ? null : error };
+};
+
+export const markNotificationsReadByType = async (userId, type) => {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('type', type)
+    .is('read_at', null);
 
   return { error: isMissingSchemaError(error) ? null : error };
 };

@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 import { parseImageUrls } from '../utils/apartmentImages';
+import { AMENITIES } from '../utils/marketplace';
 
 const MAX_IMAGES = 10;
 
@@ -23,6 +24,18 @@ export default function AddApartmentScreen({ navigation, route }) {
 
   const [title, setTitle] = useState(editingApartment?.title || '');
   const [city, setCity] = useState(editingApartment?.city || '');
+  const [neighborhood, setNeighborhood] = useState(editingApartment?.neighborhood || '');
+  const [address, setAddress] = useState(editingApartment?.address || '');
+  const [latitude, setLatitude] = useState(
+    editingApartment?.latitude !== undefined && editingApartment?.latitude !== null
+      ? String(editingApartment.latitude)
+      : ''
+  );
+  const [longitude, setLongitude] = useState(
+    editingApartment?.longitude !== undefined && editingApartment?.longitude !== null
+      ? String(editingApartment.longitude)
+      : ''
+  );
   const [description, setDescription] = useState(editingApartment?.description || '');
   const [imageUrls, setImageUrls] = useState(parseImageUrls(editingApartment?.image_url));
   const [pickedImages, setPickedImages] = useState([]);
@@ -45,6 +58,12 @@ export default function AddApartmentScreen({ navigation, route }) {
   );
   const [ownerPhone, setOwnerPhone] = useState(
     editingApartment?.owner_phone || editingApartment?.owner?.phone || ''
+  );
+  const [amenities, setAmenities] = useState(
+    AMENITIES.reduce((acc, amenity) => {
+      acc[amenity.key] = Boolean(editingApartment?.[amenity.key]);
+      return acc;
+    }, {})
   );
   const [loading, setLoading] = useState(false);
 
@@ -155,7 +174,8 @@ export default function AddApartmentScreen({ navigation, route }) {
     uploadedImageUrls,
     parsedPriceValue,
     parsedRoomsValue,
-    includeOwnerContact = true
+    includeOwnerContact = true,
+    includeMarketplaceFields = true
   ) => {
     const normalizedOwnerName = ownerName.trim();
     const normalizedOwnerPhone = ownerPhone.trim();
@@ -174,7 +194,24 @@ export default function AddApartmentScreen({ navigation, route }) {
       payload.owner_phone = normalizedOwnerPhone || null;
     }
 
+    if (includeMarketplaceFields) {
+      payload.neighborhood = neighborhood.trim() || null;
+      payload.address = address.trim() || null;
+      payload.latitude = latitude.trim() ? Number(latitude) : null;
+      payload.longitude = longitude.trim() ? Number(longitude) : null;
+      AMENITIES.forEach((amenity) => {
+        payload[amenity.key] = Boolean(amenities[amenity.key]);
+      });
+    }
+
     return payload;
+  };
+
+  const toggleAmenity = (amenityKey) => {
+    setAmenities((current) => ({
+      ...current,
+      [amenityKey]: !current[amenityKey],
+    }));
   };
 
   const pickImage = async () => {
@@ -261,6 +298,14 @@ export default function AddApartmentScreen({ navigation, route }) {
       return;
     }
 
+    if (
+      (latitude.trim() && Number.isNaN(Number(latitude))) ||
+      (longitude.trim() && Number.isNaN(Number(longitude)))
+    ) {
+      Alert.alert('Error', 'Latitude dhe longitude duhet te jene numra.');
+      return;
+    }
+
     if (imageUrls.length > MAX_IMAGES) {
       Alert.alert('Error', `Mundesh me shtu maksimumi ${MAX_IMAGES} foto.`);
       return;
@@ -321,7 +366,7 @@ export default function AddApartmentScreen({ navigation, route }) {
         if (editingApartment) {
           let updateQuery = supabase
             .from('apartments')
-            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false))
+            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false))
             .eq('id', editingApartment.id);
 
           if (!isAdmin) {
@@ -332,7 +377,7 @@ export default function AddApartmentScreen({ navigation, route }) {
         } else {
           saveResult = await supabase
             .from('apartments')
-            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false)]);
+            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false)]);
         }
       }
 
@@ -389,6 +434,38 @@ export default function AddApartmentScreen({ navigation, route }) {
           style={styles.input}
         />
         <TextInput
+          placeholder="Neighborhood"
+          placeholderTextColor="#8F97A8"
+          value={neighborhood}
+          onChangeText={setNeighborhood}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="Address"
+          placeholderTextColor="#8F97A8"
+          value={address}
+          onChangeText={setAddress}
+          style={styles.input}
+        />
+        <View style={styles.coordinateRow}>
+          <TextInput
+            placeholder="Latitude"
+            placeholderTextColor="#8F97A8"
+            value={latitude}
+            onChangeText={setLatitude}
+            style={[styles.input, styles.coordinateInput]}
+            keyboardType="numeric"
+          />
+          <TextInput
+            placeholder="Longitude"
+            placeholderTextColor="#8F97A8"
+            value={longitude}
+            onChangeText={setLongitude}
+            style={[styles.input, styles.coordinateInput]}
+            keyboardType="numeric"
+          />
+        </View>
+        <TextInput
           placeholder="Description"
           placeholderTextColor="#8F97A8"
           value={description}
@@ -438,6 +515,24 @@ export default function AddApartmentScreen({ navigation, route }) {
           style={styles.input}
           keyboardType="numeric"
         />
+        <Text style={styles.fieldLabel}>Amenities</Text>
+        <View style={styles.amenitiesGrid}>
+          {AMENITIES.map((amenity) => {
+            const selected = amenities[amenity.key];
+
+            return (
+              <TouchableOpacity
+                key={amenity.key}
+                style={[styles.amenityButton, selected && styles.amenityButtonActive]}
+                onPress={() => toggleAmenity(amenity.key)}
+              >
+                <Text style={[styles.amenityButtonText, selected && styles.amenityButtonTextActive]}>
+                  {amenity.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <TextInput
           placeholder="Owner name"
           placeholderTextColor="#8F97A8"
@@ -530,6 +625,43 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     marginBottom: 12,
+  },
+  coordinateRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  coordinateInput: {
+    flex: 1,
+  },
+  fieldLabel: {
+    color: '#14213D',
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  amenityButton: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  amenityButtonActive: {
+    backgroundColor: '#14213D',
+    borderColor: '#14213D',
+  },
+  amenityButtonText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  amenityButtonTextActive: {
+    color: '#FFFFFF',
   },
   textArea: {
     minHeight: 110,

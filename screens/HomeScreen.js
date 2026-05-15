@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,19 +14,20 @@ import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
+import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
+import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
+import { registerForPushNotifications } from '../services/pushNotifications';
 
 export default function HomeScreen({ navigation }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const loadApartments = useCallback(async () => {
     try {
       setLoading(true);
-      const selectOptions = [
-        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
-        'id, owner_id, title, city, description, image_url, price, rooms',
-      ];
+      const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
       let error = null;
@@ -85,6 +86,70 @@ export default function HomeScreen({ navigation }) {
       loadApartments();
     }, [loadApartments])
   );
+
+  const loadUnreadMessages = useCallback(async () => {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      return;
+    }
+
+    await registerForPushNotifications(user.id);
+
+    const { count, error } = await loadUnreadNotificationCount(user.id, 'chat_message');
+
+    if (!error) {
+      setUnreadMessages(count);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUnreadMessages();
+    }, [loadUnreadMessages])
+  );
+
+  useEffect(() => {
+    let channel = null;
+    let mounted = true;
+
+    const subscribeToNotifications = async () => {
+      const { user } = await getCurrentUser();
+
+      if (!mounted || !user) {
+        return;
+      }
+
+      channel = supabase
+        .channel(`home-chat-notifications-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const nextType = payload.new?.type || payload.old?.type;
+
+            if (nextType === 'chat_message') {
+              loadUnreadMessages();
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    subscribeToNotifications();
+
+    return () => {
+      mounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [loadUnreadMessages]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
@@ -150,6 +215,19 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.historyButtonText}>Notifications</Text>
           </TouchableOpacity>
         </View>
+        <View style={styles.heroButtons}>
+          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Profile')}>
+            <Text style={styles.historyButtonText}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Messages')}>
+            {unreadMessages > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.historyButtonText}>Messages</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SectionList
@@ -189,7 +267,16 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
-              <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+              <Text style={styles.cardMeta}>
+                {item.rooms} rooms | {item.neighborhood || item.city || 'Lokacion'}
+              </Text>
+              <View style={styles.amenitiesRow}>
+                {getAmenityLabels(item).slice(0, 4).map((label) => (
+                  <View key={label} style={styles.amenityChip}>
+                    <Text style={styles.amenityChipText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -274,11 +361,32 @@ const styles = StyleSheet.create({
     borderColor: '#D2D8E3',
     paddingVertical: 14,
     alignItems: 'center',
+    position: 'relative',
   },
   historyButtonText: {
     color: '#14213D',
     fontWeight: '800',
     fontSize: 14,
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: 12,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF5A5F',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    zIndex: 2,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
   list: {
     width: '100%',
@@ -342,6 +450,25 @@ const styles = StyleSheet.create({
     color: '#14213D',
     marginTop: 12,
     fontWeight: '700',
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  amenityChip: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  amenityChipText: {
+    color: '#14213D',
+    fontSize: 12,
+    fontWeight: '800',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',

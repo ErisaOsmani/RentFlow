@@ -14,6 +14,7 @@ import {
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
+import { AMENITIES, APARTMENT_SELECT_FULL, getAmenityLabels, hasMapLocation } from '../utils/marketplace';
 
 export default function SearchScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -22,9 +23,13 @@ export default function SearchScreen({ navigation }) {
 
   const [searchText, setSearchText] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [locationText, setLocationText] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minRooms, setMinRooms] = useState('');
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  const [mapOnly, setMapOnly] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
   const [cities, setCities] = useState([]);
 
   const loadCities = useCallback(async () => {
@@ -80,10 +85,7 @@ export default function SearchScreen({ navigation }) {
         return query.order('price', { ascending: true });
       };
 
-      const selectOptions = [
-        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
-        'id, owner_id, title, city, description, image_url, price, rooms',
-      ];
+      const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
       let error = null;
@@ -119,15 +121,38 @@ export default function SearchScreen({ navigation }) {
         results = results.filter(
           (item) =>
             item.title?.toLowerCase().includes(searchLower) ||
-            item.description?.toLowerCase().includes(searchLower)
+            item.description?.toLowerCase().includes(searchLower) ||
+            item.city?.toLowerCase().includes(searchLower) ||
+            item.neighborhood?.toLowerCase().includes(searchLower) ||
+            item.address?.toLowerCase().includes(searchLower)
         );
+      }
+
+      if (locationText.trim()) {
+        const locationLower = locationText.toLowerCase();
+        results = results.filter(
+          (item) =>
+            item.city?.toLowerCase().includes(locationLower) ||
+            item.neighborhood?.toLowerCase().includes(locationLower) ||
+            item.address?.toLowerCase().includes(locationLower)
+        );
+      }
+
+      if (selectedAmenities.length) {
+        results = results.filter((item) =>
+          selectedAmenities.every((amenityKey) => Boolean(item[amenityKey]))
+        );
+      }
+
+      if (mapOnly) {
+        results = results.filter(hasMapLocation);
       }
 
       setApartments(results);
     } finally {
       setLoading(false);
     }
-  }, [searchText, selectedCity, minPrice, maxPrice, minRooms]);
+  }, [searchText, selectedCity, locationText, minPrice, maxPrice, minRooms, selectedAmenities, mapOnly]);
 
   React.useEffect(() => {
     loadCities();
@@ -156,6 +181,11 @@ export default function SearchScreen({ navigation }) {
         <Text style={styles.cardCity}>{item.city}</Text>
         <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
         <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+        <View style={styles.cardAmenities}>
+          {getAmenityLabels(item).slice(0, 4).map((label) => (
+            <Text key={label} style={styles.cardAmenityText}>{label}</Text>
+          ))}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -163,10 +193,42 @@ export default function SearchScreen({ navigation }) {
   const clearFilters = () => {
     setSearchText('');
     setSelectedCity('');
+    setLocationText('');
     setMinPrice('');
     setMaxPrice('');
     setMinRooms('');
+    setSelectedAmenities([]);
+    setMapOnly(false);
   };
+
+  const toggleAmenity = (amenityKey) => {
+    setSelectedAmenities((current) =>
+      current.includes(amenityKey)
+        ? current.filter((key) => key !== amenityKey)
+        : [...current, amenityKey]
+    );
+  };
+
+  const renderMapPin = ({ item }) => (
+    <TouchableOpacity
+      style={styles.mapPinCard}
+      activeOpacity={0.86}
+      onPress={() => navigation.navigate('ApartmentDetail', { apartment: item })}
+    >
+      <View style={styles.mapPinMarker}>
+        <Text style={styles.mapPinMarkerText}>${item.price}</Text>
+      </View>
+      <View style={styles.mapPinInfo}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardCity}>{item.address || item.neighborhood || item.city}</Text>
+        <Text style={styles.cardMeta}>
+          {hasMapLocation(item)
+            ? `${Number(item.latitude).toFixed(4)}, ${Number(item.longitude).toFixed(4)}`
+            : 'Lokacioni ne harte mungon'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -194,6 +256,21 @@ export default function SearchScreen({ navigation }) {
         <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
       </TouchableOpacity>
 
+      <View style={styles.viewSwitch}>
+        <TouchableOpacity
+          style={[styles.viewSwitchButton, viewMode === 'list' && styles.viewSwitchButtonActive]}
+          onPress={() => setViewMode('list')}
+        >
+          <Text style={[styles.viewSwitchText, viewMode === 'list' && styles.viewSwitchTextActive]}>List</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewSwitchButton, viewMode === 'map' && styles.viewSwitchButtonActive]}
+          onPress={() => setViewMode('map')}
+        >
+          <Text style={[styles.viewSwitchText, viewMode === 'map' && styles.viewSwitchTextActive]}>Map</Text>
+        </TouchableOpacity>
+      </View>
+
       {showFilters && (
         <ScrollView style={styles.filterPanel} showsVerticalScrollIndicator={false}>
           <View style={styles.filterSection}>
@@ -219,6 +296,17 @@ export default function SearchScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Location search</Text>
+            <TextInput
+              placeholder="Lagje, adrese ose qytet"
+              placeholderTextColor="#8F97A8"
+              style={styles.filterInput}
+              value={locationText}
+              onChangeText={setLocationText}
+            />
           </View>
 
           <View style={styles.filterSection}>
@@ -255,6 +343,36 @@ export default function SearchScreen({ navigation }) {
             />
           </View>
 
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Amenities</Text>
+            <View style={styles.amenitiesGrid}>
+              {AMENITIES.map((amenity) => {
+                const selected = selectedAmenities.includes(amenity.key);
+
+                return (
+                  <TouchableOpacity
+                    key={amenity.key}
+                    style={[styles.amenityButton, selected && styles.amenityButtonActive]}
+                    onPress={() => toggleAmenity(amenity.key)}
+                  >
+                    <Text style={[styles.amenityButtonText, selected && styles.amenityButtonTextActive]}>
+                      {amenity.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.mapOnlyButton, mapOnly && styles.mapOnlyButtonActive]}
+            onPress={() => setMapOnly((current) => !current)}
+          >
+            <Text style={[styles.mapOnlyText, mapOnly && styles.mapOnlyTextActive]}>
+              Vetem banesa me lokacion ne harte
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
             <Text style={styles.clearButtonText}>Clear all filters</Text>
           </TouchableOpacity>
@@ -268,7 +386,17 @@ export default function SearchScreen({ navigation }) {
           data={apartments}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
-          renderItem={renderApartment}
+          renderItem={viewMode === 'map' ? renderMapPin : renderApartment}
+          ListHeaderComponent={
+            viewMode === 'map' ? (
+              <View style={styles.mapPreview}>
+                <Text style={styles.mapPreviewTitle}>Map view</Text>
+                <Text style={styles.mapPreviewText}>
+                  {apartments.filter(hasMapLocation).length} listings kane koordinata reale. Hap detajet per Google Maps.
+                </Text>
+              </View>
+            ) : null
+          }
         />
       ) : (
         <View style={styles.emptyState}>
@@ -331,6 +459,31 @@ const styles = StyleSheet.create({
   filterToggleText: {
     color: '#FFFFFF',
     fontWeight: '800',
+  },
+  viewSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 14,
+  },
+  viewSwitchButton: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  viewSwitchButtonActive: {
+    backgroundColor: '#FF5A5F',
+  },
+  viewSwitchText: {
+    color: '#667085',
+    fontWeight: '800',
+  },
+  viewSwitchTextActive: {
+    color: '#FFFFFF',
   },
   filterPanel: {
     backgroundColor: '#FFFFFF',
@@ -399,6 +552,50 @@ const styles = StyleSheet.create({
     color: '#D92D20',
     fontWeight: '800',
   },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  amenityButton: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  amenityButtonActive: {
+    backgroundColor: '#14213D',
+    borderColor: '#14213D',
+  },
+  amenityButtonText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  amenityButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  mapOnlyButton: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mapOnlyButtonActive: {
+    backgroundColor: '#FFE9EA',
+    borderColor: '#FF5A5F',
+  },
+  mapOnlyText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  mapOnlyTextActive: {
+    color: '#FF5A5F',
+  },
   loader: {
     marginTop: 40,
   },
@@ -459,6 +656,65 @@ const styles = StyleSheet.create({
     color: '#14213D',
     fontWeight: '700',
     fontSize: 12,
+  },
+  cardAmenities: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  cardAmenityText: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    color: '#14213D',
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  mapPreview: {
+    backgroundColor: '#14213D',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
+  },
+  mapPreviewTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  mapPreviewText: {
+    color: '#D3DAE6',
+    lineHeight: 20,
+  },
+  mapPinCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  mapPinMarker: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#FF5A5F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapPinMarkerText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  mapPinInfo: {
+    flex: 1,
   },
   emptyState: {
     flex: 1,

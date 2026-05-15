@@ -39,7 +39,7 @@ export default function NotificationsScreen({ navigation }) {
       }
 
       setUnavailable(result.unavailable);
-      setNotifications(result.notifications);
+      setNotifications((result.notifications || []).filter((notification) => !notification.read_at));
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,12 @@ export default function NotificationsScreen({ navigation }) {
   const handleOpen = async (item) => {
     if (!item.read_at) {
       await markNotificationRead(item.id);
-      loadData();
+      setNotifications((current) => current.filter((notification) => notification.id !== item.id));
+    }
+
+    if (item.type === 'chat_message') {
+      navigation.navigate('Messages');
+      return;
     }
 
     if (item.apartment_id) {

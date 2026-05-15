@@ -15,6 +15,8 @@ import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
+import { APARTMENT_SELECT_FULL, USER_PROFILE_SELECT_FULL, getProfileVerificationLabel } from '../utils/marketplace';
+import { setProfileVerification } from '../services/sprintTwo';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -51,12 +53,7 @@ export default function AdminHomeScreen({ navigation }) {
 
       setCurrentAdminId(userId);
 
-      const userSelectOptions = [
-        'id, email, first_name, last_name, phone, role',
-        'id, email, first_name, last_name, role',
-        'id, email, role',
-        'id',
-      ];
+      const userSelectOptions = USER_PROFILE_SELECT_FULL;
 
       let usersData = [];
 
@@ -87,10 +84,7 @@ export default function AdminHomeScreen({ navigation }) {
         return;
       }
 
-      const apartmentSelectOptions = [
-        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
-        'id, owner_id, title, city, description, image_url, price, rooms',
-      ];
+      const apartmentSelectOptions = APARTMENT_SELECT_FULL;
 
       let apartmentData = [];
       let apartmentError = null;
@@ -377,6 +371,17 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
+  const handleVerification = async (user, verified) => {
+    const { error } = await setProfileVerification({ userId: user.id, verified });
+
+    if (error) {
+      Alert.alert('Gabim', error.message);
+      return;
+    }
+
+    loadAdminData();
+  };
+
   const renderOverviewItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -538,6 +543,7 @@ export default function AdminHomeScreen({ navigation }) {
         {isExpanded ? (
           <View style={styles.detailsPanel}>
             <Text style={styles.detailLine}>Phone: {item.phone || 'Nuk ka numer'}</Text>
+            <Text style={styles.detailLine}>Verification: {getProfileVerificationLabel(item)}</Text>
             <Text style={styles.detailLine}>User ID: {item.id}</Text>
             <Text style={styles.detailLine}>
               Banesa: {apartments.filter((apartment) => apartment.owner_id === item.id).length}
@@ -557,6 +563,24 @@ export default function AdminHomeScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+            <View style={styles.roleActions}>
+              <TouchableOpacity
+                style={[styles.roleButton, item.verified && styles.roleButtonActive]}
+                onPress={() => handleVerification(item, true)}
+              >
+                <Text style={[styles.roleButtonText, item.verified && styles.roleButtonTextActive]}>
+                  verify
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.roleButton, !item.verified && styles.roleButtonActive]}
+                onPress={() => handleVerification(item, false)}
+              >
+                <Text style={[styles.roleButtonText, !item.verified && styles.roleButtonTextActive]}>
+                  reject
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         ) : (

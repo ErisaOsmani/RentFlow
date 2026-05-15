@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { getCurrentUser, loadFavoriteApartmentIds } from '../services/sprintOne';
+import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
 
 export default function FavoritesScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -41,10 +42,7 @@ export default function FavoritesScreen({ navigation }) {
         return;
       }
 
-      const selectOptions = [
-        'id, owner_id, owner_name, owner_phone, title, city, description, image_url, price, rooms',
-        'id, owner_id, title, city, description, image_url, price, rooms',
-      ];
+      const selectOptions = APARTMENT_SELECT_FULL;
 
       for (const selectFields of selectOptions) {
         const result = await supabase
@@ -91,6 +89,11 @@ export default function FavoritesScreen({ navigation }) {
         </View>
         <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
         <Text style={styles.cardMeta}>{item.rooms || 0} rooms</Text>
+        <View style={styles.amenitiesRow}>
+          {getAmenityLabels(item).slice(0, 4).map((label) => (
+            <Text key={label} style={styles.amenityText}>{label}</Text>
+          ))}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -197,6 +200,23 @@ const styles = StyleSheet.create({
   cardMeta: {
     color: '#14213D',
     fontWeight: '700',
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  amenityText: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    color: '#14213D',
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   emptyState: {
     flex: 1,

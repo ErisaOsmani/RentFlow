@@ -12,6 +12,7 @@ import {
   FlatList,
   TextInput,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
@@ -19,6 +20,12 @@ import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
 import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
+import {
+  getAmenityLabels,
+  getProfileVerificationLabel,
+  hasMapLocation,
+  USER_PROFILE_SELECT_FULL,
+} from '../utils/marketplace';
 import {
   createBooking,
   createNotification,
@@ -107,12 +114,7 @@ export default function ApartmentDetailScreen() {
       return;
     }
 
-    const ownerSelectOptions = [
-      'id, first_name, last_name, phone',
-      'id, first_name, last_name',
-      'id, phone',
-      'id',
-    ];
+    const ownerSelectOptions = USER_PROFILE_SELECT_FULL;
 
     for (const selectFields of ownerSelectOptions) {
       const { data, error } = await supabase
@@ -235,6 +237,8 @@ export default function ApartmentDetailScreen() {
   const profileOwnerName = [ownerProfile?.first_name, ownerProfile?.last_name].filter(Boolean).join(' ').trim();
   const ownerName = apartment?.owner_name || profileOwnerName;
   const ownerPhone = apartment?.owner_phone || ownerProfile?.phone;
+  const amenityLabels = getAmenityLabels(apartment);
+  const ownerVerificationLabel = getProfileVerificationLabel(ownerProfile);
 
   const openImageViewer = (index) => {
     setViewerIndex(index);
@@ -439,6 +443,36 @@ export default function ApartmentDetailScreen() {
     }
   };
 
+  const openGoogleMaps = async () => {
+    const query = hasMapLocation(apartment)
+      ? `${apartment.latitude},${apartment.longitude}`
+      : [apartment?.address, apartment?.neighborhood, apartment?.city].filter(Boolean).join(', ');
+
+    if (!query) {
+      Alert.alert('Map', 'Lokacioni nuk eshte shtuar ende.');
+      return;
+    }
+
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    await Linking.openURL(url);
+  };
+
+  const openChat = async () => {
+    const { user, error } = await getCurrentUser();
+
+    if (error || !user) {
+      Alert.alert('Gabim', 'Duhet te jesh i kycur per chat.');
+      return;
+    }
+
+    if (!apartment?.owner_id) {
+      Alert.alert('Gabim', 'Owner-i i kesaj banese nuk u gjet.');
+      return;
+    }
+
+    navigation.navigate('Chat', { apartment, clientId: user.id });
+  };
+
   if (!apartment) {
     return (
       <View style={styles.emptyContainer}>
@@ -502,6 +536,32 @@ export default function ApartmentDetailScreen() {
         </View>
       </View>
 
+      {amenityLabels.length ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Amenities</Text>
+          <View style={styles.amenitiesRow}>
+            {amenityLabels.map((label) => (
+              <View key={label} style={styles.amenityChip}>
+                <Text style={styles.amenityChipText}>{label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Location</Text>
+        <TouchableOpacity style={styles.mapBox} activeOpacity={0.88} onPress={openGoogleMaps}>
+          <Text style={styles.mapTitle}>{apartment.address || apartment.neighborhood || apartment.city || 'Lokacion'}</Text>
+          <Text style={styles.mapText}>
+            {hasMapLocation(apartment)
+              ? `${Number(apartment.latitude).toFixed(5)}, ${Number(apartment.longitude).toFixed(5)}`
+              : 'Hap ne Google Maps me adrese/qytet.'}
+          </Text>
+          <Text style={styles.mapButtonText}>Open Google Maps</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Details</Text>
         <Text style={styles.description}>{apartment.description || 'No description provided.'}</Text>
@@ -515,10 +575,18 @@ export default function ApartmentDetailScreen() {
           disabled={!ownerPhone}
         >
           <Text style={styles.ownerName}>{ownerName || 'Owner'}</Text>
+          <Text style={[styles.verificationText, ownerProfile?.verified && styles.verificationTextVerified]}>
+            {ownerVerificationLabel}
+          </Text>
           <Text style={[styles.ownerPhone, !ownerPhone && styles.ownerPhoneDisabled]}>
             {ownerPhone || 'Nuk ka numer'}
           </Text>
         </TouchableOpacity>
+        {!isAdminView ? (
+          <TouchableOpacity style={styles.chatButton} onPress={openChat}>
+            <Text style={styles.chatButtonText}>Chat in app</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {imageUrls.length > 1 ? (
@@ -825,12 +893,70 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 6,
   },
+  verificationText: {
+    color: '#D92D20',
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  verificationTextVerified: {
+    color: '#15803D',
+  },
   ownerPhone: {
     color: '#FF5A5F',
     fontWeight: '800',
   },
   ownerPhoneDisabled: {
     color: '#94A3B8',
+  },
+  chatButton: {
+    backgroundColor: '#14213D',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  amenityChip: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  amenityChipText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  mapBox: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+  },
+  mapTitle: {
+    color: '#14213D',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  mapText: {
+    color: '#667085',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  mapButtonText: {
+    color: '#FF5A5F',
+    fontWeight: '800',
   },
   gallery: {
     flexDirection: 'row',
