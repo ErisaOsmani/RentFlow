@@ -167,7 +167,9 @@ export default function BookingHistoryScreen({ navigation }) {
             {item.apartment?.price ? `$${item.apartment.price} / month` : 'N/A'}
           </Text>
         </View>
-        <Text style={styles.cardCity}>{item.apartment?.city || 'Unknown city'}</Text>
+        <View style={styles.cityBadge}>
+          <Text style={styles.cardCity}>{item.apartment?.city || 'Unknown city'}</Text>
+        </View>
         <View style={styles.row}>
           <Text style={styles.metaLabel}>From</Text>
           <Text style={styles.metaValue}>{item.start_date}</Text>
@@ -324,9 +326,19 @@ const styles = StyleSheet.create({
     color: '#FF5A5F',
     fontWeight: '800',
   },
+  cityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 12,
+  },
   cardCity: {
     color: '#667085',
-    marginBottom: 12,
+    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',

@@ -87,7 +87,9 @@ export default function FavoritesScreen({ navigation }) {
           <Text style={styles.cardTitle}>{item.title}</Text>
           <Text style={styles.priceText}>${item.price} / month</Text>
         </View>
-        <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+        <View style={styles.cityBadge}>
+          <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+        </View>
         <Text style={styles.cardMeta}>{item.rooms || 0} rooms</Text>
         <View style={styles.amenitiesRow}>
           {getAmenityLabels(item).slice(0, 4).map((label) => (
@@ -195,6 +197,15 @@ const styles = StyleSheet.create({
   cardCity: {
     color: '#667085',
     fontWeight: '700',
+  },
+  cityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     marginBottom: 8,
   },
   cardMeta: {

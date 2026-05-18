@@ -178,7 +178,9 @@ export default function SearchScreen({ navigation }) {
             <Text style={styles.priceBadgeText}>${item.price} / month</Text>
           </View>
         </View>
-        <Text style={styles.cardCity}>{item.city}</Text>
+        <View style={styles.cityBadge}>
+          <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+        </View>
         <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
         <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
         <View style={styles.cardAmenities}>
@@ -644,7 +646,16 @@ const styles = StyleSheet.create({
   cardCity: {
     color: '#667085',
     fontWeight: '700',
-    marginBottom: 6,
+  },
+  cityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 8,
   },
   cardDesc: {
     color: '#667085',

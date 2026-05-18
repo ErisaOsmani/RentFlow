@@ -199,8 +199,8 @@ export default function OwnerHomeScreen({ navigation }) {
     ]);
   };
 
-  return (
-    <View style={styles.container}>
+  const renderListHeader = () => (
+    <>
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <View style={styles.heroTextWrap}>
@@ -218,44 +218,51 @@ export default function OwnerHomeScreen({ navigation }) {
         <Text style={styles.subtitle}>
           Shto banesa, pershkrime dhe menaxho listing-et e tua me nje pamje me premium.
         </Text>
+
+        <View style={styles.ownerActions}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('AddApartment')}>
+            <Text style={styles.primaryButtonText}>Add Apartment</Text>
+          </TouchableOpacity>
+
+          <View style={styles.ownerActionRow}>
+            <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('OwnerBookingHistory')}>
+              {newBookings > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{newBookings > 9 ? '9+' : newBookings}</Text>
+                </View>
+              ) : null}
+              <Text style={styles.ownerActionButtonText}>View bookings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Notifications')}>
+              <Text style={styles.ownerActionButtonText}>Notifications</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.ownerActionRow}>
+            <TouchableOpacity style={styles.ownerActionButtonFull} onPress={() => navigation.navigate('Messages')}>
+              {unreadMessages > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+                </View>
+              ) : null}
+              <Text style={styles.ownerActionButtonText}>Messages</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('AddApartment')}>
-        <Text style={styles.primaryButtonText}>Add Apartment</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('OwnerBookingHistory')}>
-        {newBookings > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{newBookings > 9 ? '9+' : newBookings}</Text>
-          </View>
-        ) : null}
-        <Text style={styles.ownerActionButtonText}>View bookings</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Notifications')}>
-        <Text style={styles.ownerActionButtonText}>Notifications</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Messages')}>
-        {unreadMessages > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
-          </View>
-        ) : null}
-        <Text style={styles.ownerActionButtonText}>Messages</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('Profile')}>
-        <Text style={styles.ownerActionButtonText}>Profile verification</Text>
-      </TouchableOpacity>
-
       <Text style={styles.sectionTitle}>My Apartments</Text>
+    </>
+  );
 
+  return (
+    <View style={styles.container}>
       <FlatList
         data={apartments}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderListHeader}
         refreshing={loading}
         onRefresh={loadApartments}
         ListEmptyComponent={
@@ -363,12 +370,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  ownerActions: {
+    marginTop: 18,
+  },
+  ownerActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
   primaryButton: {
     backgroundColor: '#FF5A5F',
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
-    marginBottom: 18,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -376,19 +390,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   ownerActionButton: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#DEE4EF',
     padding: 16,
     alignItems: 'center',
-    marginBottom: 18,
+    justifyContent: 'center',
+    minHeight: 56,
+    position: 'relative',
+  },
+  ownerActionButtonFull: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DEE4EF',
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
     position: 'relative',
   },
   ownerActionButtonText: {
     color: '#14213D',
     fontWeight: '800',
     fontSize: 16,
+    textAlign: 'center',
   },
   badge: {
     position: 'absolute',

@@ -179,62 +179,66 @@ export default function HomeScreen({ navigation }) {
     ]);
   };
 
+  const renderListHeader = () => (
+    <View style={styles.hero}>
+      <View style={styles.heroTop}>
+        <View style={styles.heroTextWrap}>
+          <Text style={styles.eyebrow}>DISCOVER</Text>
+          <Text style={styles.title}>Apartments By City</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.logoutChip, loggingOut && styles.logoutChipDisabled]}
+          onPress={handleLogout}
+          disabled={loggingOut}
+        >
+          <Text style={styles.logoutChipText}>{loggingOut ? '...' : 'Logout'}</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.subtitle}>
+        Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
+      </Text>
+
+      <View style={styles.heroButtons}>
+        <TouchableOpacity style={styles.searchButton} onPress={() => navigation.navigate('Search')}>
+          <Text style={styles.searchButtonText}>Search & Filter</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('BookingHistory')}>
+          <Text style={styles.historyButtonText}>My bookings</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.heroButtons}>
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Favorites')}>
+          <Text style={styles.historyButtonText}>Saved</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Notifications')}>
+          <Text style={styles.historyButtonText}>Notifications</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.heroButtons}>
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Profile')}>
+          <Text style={styles.historyButtonText}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Messages')}>
+          {unreadMessages > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.historyButtonText}>Messages</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroTextWrap}>
-            <Text style={styles.eyebrow}>DISCOVER</Text>
-            <Text style={styles.title}>Apartments By City</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.logoutChip, loggingOut && styles.logoutChipDisabled]}
-            onPress={handleLogout}
-            disabled={loggingOut}
-          >
-            <Text style={styles.logoutChipText}>{loggingOut ? '...' : 'Logout'}</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.subtitle}>
-          Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
-        </Text>
-
-        <View style={styles.heroButtons}>
-          <TouchableOpacity style={styles.searchButton} onPress={() => navigation.navigate('Search')}>
-            <Text style={styles.searchButtonText}>Search & Filter</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('BookingHistory')}>
-            <Text style={styles.historyButtonText}>My bookings</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.heroButtons}>
-          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Favorites')}>
-            <Text style={styles.historyButtonText}>Saved</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Notifications')}>
-            <Text style={styles.historyButtonText}>Notifications</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.heroButtons}>
-          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Profile')}>
-            <Text style={styles.historyButtonText}>Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('Messages')}>
-            {unreadMessages > 0 ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
-              </View>
-            ) : null}
-            <Text style={styles.historyButtonText}>Messages</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <SectionList
         sections={sections}
         keyExtractor={(item) => String(item.id)}
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderListHeader}
+        stickySectionHeadersEnabled={false}
         refreshing={loading}
         onRefresh={loadApartments}
         ListEmptyComponent={
@@ -245,9 +249,6 @@ export default function HomeScreen({ navigation }) {
             </Text>
           </View>
         }
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.cityHeader}>{title}</Text>
-        )}
         renderItem={({ item }) => {
           const primaryImageUrl = getPrimaryImageUrl(item.image_url);
 
@@ -265,6 +266,9 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.priceBadge}>
                   <Text style={styles.priceBadgeText}>${item.price} / month</Text>
                 </View>
+              </View>
+              <View style={styles.cityBadge}>
+                <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
               <Text style={styles.cardMeta}>
@@ -394,13 +398,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 28,
   },
-  cityHeader: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#14213D',
-    marginTop: 4,
-    marginBottom: 12,
-  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -441,6 +438,20 @@ const styles = StyleSheet.create({
   priceBadgeText: {
     color: '#FF5A5F',
     fontWeight: '800',
+  },
+  cityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 10,
+  },
+  cardCity: {
+    color: '#667085',
+    fontWeight: '700',
   },
   cardDesc: {
     color: '#667085',
