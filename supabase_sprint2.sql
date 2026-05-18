@@ -25,6 +25,8 @@ alter table public.bookings
   add column if not exists cancelled_at timestamptz,
   add column if not exists cancelled_by uuid references auth.users(id);
 
+create extension if not exists btree_gist;
+
 do $$
 begin
   if not exists (
@@ -35,6 +37,36 @@ begin
     alter table public.users
       add constraint users_verification_status_check
       check (verification_status in ('unverified', 'pending', 'verified', 'rejected'));
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'bookings_valid_date_range_check'
+  ) then
+    alter table public.bookings
+      add constraint bookings_valid_date_range_check
+      check (start_date < end_date);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'bookings_no_active_overlap'
+  ) then
+    alter table public.bookings
+      add constraint bookings_no_active_overlap
+      exclude using gist (
+        apartment_id with =,
+        daterange(start_date, end_date, '[)') with &&
+      )
+      where (status not in ('cancelled', 'rejected'));
   end if;
 end $$;
 

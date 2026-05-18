@@ -97,6 +97,7 @@ export default function ApartmentDetailScreen() {
 
       if (error) {
         Alert.alert('Gabim', error.message);
+        await loadRecentBookings();
         return;
       }
 

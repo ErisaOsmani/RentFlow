@@ -22,6 +22,7 @@ export default function OwnerHomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [newBookings, setNewBookings] = useState(0);
 
   const loadApartments = useCallback(async () => {
     try {
@@ -106,10 +107,25 @@ export default function OwnerHomeScreen({ navigation }) {
     }
   }, []);
 
+  const loadNewBookings = useCallback(async () => {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      return;
+    }
+
+    const { count, error } = await loadUnreadNotificationCount(user.id, 'booking_created');
+
+    if (!error) {
+      setNewBookings(count);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadUnreadMessages();
-    }, [loadUnreadMessages])
+      loadNewBookings();
+    }, [loadNewBookings, loadUnreadMessages])
   );
 
   useEffect(() => {
@@ -139,6 +155,10 @@ export default function OwnerHomeScreen({ navigation }) {
             if (nextType === 'chat_message') {
               loadUnreadMessages();
             }
+
+            if (nextType === 'booking_created') {
+              loadNewBookings();
+            }
           }
         )
         .subscribe();
@@ -152,7 +172,7 @@ export default function OwnerHomeScreen({ navigation }) {
         supabase.removeChannel(channel);
       }
     };
-  }, [loadUnreadMessages]);
+  }, [loadNewBookings, loadUnreadMessages]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
@@ -205,6 +225,11 @@ export default function OwnerHomeScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.ownerActionButton} onPress={() => navigation.navigate('OwnerBookingHistory')}>
+        {newBookings > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{newBookings > 9 ? '9+' : newBookings}</Text>
+          </View>
+        ) : null}
         <Text style={styles.ownerActionButtonText}>View bookings</Text>
       </TouchableOpacity>
 

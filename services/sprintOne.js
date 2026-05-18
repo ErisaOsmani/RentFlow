@@ -2,8 +2,11 @@ import { supabase } from './supabase';
 import { sendPushNotificationToUser } from './pushNotifications';
 
 const MISSING_SCHEMA_CODES = new Set(['42P01', '42703']);
+const BOOKING_CONFLICT_CODES = new Set(['23P01']);
 
 export const isMissingSchemaError = (error) => Boolean(error && MISSING_SCHEMA_CODES.has(error.code));
+
+export const isBookingConflictError = (error) => Boolean(error && BOOKING_CONFLICT_CODES.has(error.code));
 
 export const getCurrentUser = async () => {
   const { data, error } = await supabase.auth.getUser();
@@ -250,8 +253,11 @@ export const createBooking = async (payload) => {
       return { booking: null, error: fallback.error };
     }
 
-    if (result.error.code === '23505') {
-      continue;
+    if (isBookingConflictError(result.error)) {
+      return {
+        booking: null,
+        error: { message: 'Keto data jane te zena per kete banese. Zgjidh data te tjera.' },
+      };
     }
 
     return { booking: null, error: result.error };

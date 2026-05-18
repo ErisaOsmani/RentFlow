@@ -11,7 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
-import { createNotification, updateBookingStatus } from '../services/sprintOne';
+import { createNotification, markNotificationsReadByType, updateBookingStatus } from '../services/sprintOne';
 
 export default function OwnerBookingHistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -31,6 +31,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       }
 
       setCurrentOwnerId(ownerId);
+      await markNotificationsReadByType(ownerId, 'booking_created');
 
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')

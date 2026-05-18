@@ -179,6 +179,7 @@ export default function BookingScreen({ route, navigation }) {
 
       if (error) {
         Alert.alert('Gabim', error.message);
+        await loadUnavailableRanges();
         return;
       }
 
