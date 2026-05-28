@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 import { parseImageUrls } from '../utils/apartmentImages';
 import { AMENITIES } from '../utils/marketplace';
+import { generateApartmentDescription, getListingQualityReport } from '../services/sprintFour';
 
 const MAX_IMAGES = 10;
 
@@ -66,6 +67,27 @@ export default function AddApartmentScreen({ navigation, route }) {
     }, {})
   );
   const [loading, setLoading] = useState(false);
+
+  const draftApartment = useMemo(() => {
+    const draft = {
+      title,
+      city,
+      neighborhood,
+      address,
+      description,
+      image_url: imageUrls,
+      price,
+      rooms,
+    };
+
+    AMENITIES.forEach((amenity) => {
+      draft[amenity.key] = Boolean(amenities[amenity.key]);
+    });
+
+    return draft;
+  }, [address, amenities, city, description, imageUrls, neighborhood, price, rooms, title]);
+
+  const qualityReport = useMemo(() => getListingQualityReport(draftApartment), [draftApartment]);
 
   const loadOwnerContact = useCallback(async () => {
     if (!editingApartment?.owner_id) {
@@ -212,6 +234,11 @@ export default function AddApartmentScreen({ navigation, route }) {
       ...current,
       [amenityKey]: !current[amenityKey],
     }));
+  };
+
+  const handleGenerateDescription = () => {
+    const generatedDescription = generateApartmentDescription(draftApartment);
+    setDescription(generatedDescription);
   };
 
   const pickImage = async () => {
@@ -474,6 +501,9 @@ export default function AddApartmentScreen({ navigation, route }) {
           multiline
           numberOfLines={5}
         />
+        <TouchableOpacity style={styles.aiButton} onPress={handleGenerateDescription}>
+          <Text style={styles.aiButtonText}>Generate description</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
           <Text style={styles.imagePickerButtonText}>
             {imageUrls.length ? 'Change Photos' : 'Choose Photos'}
@@ -548,6 +578,23 @@ export default function AddApartmentScreen({ navigation, route }) {
           style={styles.input}
           keyboardType="phone-pad"
         />
+
+        <View style={styles.aiPanel}>
+          <View style={styles.aiPanelHeader}>
+            <Text style={styles.aiPanelTitle}>Listing AI check</Text>
+            <Text style={[
+              styles.aiScore,
+              qualityReport.risk === 'high' && styles.aiScoreDanger,
+              qualityReport.risk === 'medium' && styles.aiScoreWarning,
+            ]}>
+              {qualityReport.score}/100
+            </Text>
+          </View>
+          <Text style={styles.aiPanelLabel}>{qualityReport.label}</Text>
+          {qualityReport.suggestions.slice(0, 4).map((suggestion) => (
+            <Text key={suggestion} style={styles.aiSuggestion}>- {suggestion}</Text>
+          ))}
+        </View>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -680,6 +727,19 @@ const styles = StyleSheet.create({
     color: '#14213D',
     fontWeight: '700',
   },
+  aiButton: {
+    backgroundColor: '#ECFDF3',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  aiButtonText: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
   imageCountText: {
     color: '#667085',
     fontWeight: '600',
@@ -731,5 +791,44 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  aiPanel: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  aiPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aiPanelTitle: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  aiScore: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
+  aiScoreWarning: {
+    color: '#B45309',
+  },
+  aiScoreDanger: {
+    color: '#D92D20',
+  },
+  aiPanelLabel: {
+    color: '#475569',
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  aiSuggestion: {
+    color: '#667085',
+    lineHeight: 20,
+    fontWeight: '600',
   },
 });

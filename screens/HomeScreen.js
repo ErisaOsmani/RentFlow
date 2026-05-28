@@ -15,8 +15,13 @@ import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
-import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
+import { getCurrentUser, loadFavoriteApartmentIds, loadUnreadNotificationCount } from '../services/sprintOne';
 import { registerForPushNotifications } from '../services/pushNotifications';
+import {
+  buildPreferencesFromApartments,
+  getPreferenceSummary,
+  getRecommendedApartments,
+} from '../services/sprintFour';
 
 export default function HomeScreen({ navigation }) {
   const [sections, setSections] = useState([]);
@@ -61,6 +66,17 @@ export default function HomeScreen({ navigation }) {
       }
 
       const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
+      const { user } = await getCurrentUser();
+      let recommendationPreferences = {};
+
+      if (user) {
+        const { favoriteApartmentIds } = await loadFavoriteApartmentIds(user.id);
+        const favoriteIdSet = new Set((favoriteApartmentIds || []).map(String));
+        const favoriteApartments = availableApartments.filter((item) => favoriteIdSet.has(String(item.id)));
+        recommendationPreferences = buildPreferencesFromApartments(favoriteApartments);
+      }
+
+      const recommended = getRecommendedApartments(availableApartments, recommendationPreferences, 4);
 
       const grouped = availableApartments.reduce((acc, item) => {
         const city = item.city || 'Pa qytet';
@@ -75,7 +91,17 @@ export default function HomeScreen({ navigation }) {
         return acc;
       }, []);
 
-      setSections(grouped);
+      setSections([
+        ...(recommended.length
+          ? [{
+              title: recommendationPreferences.learnedFromUser ? 'Recommended for you' : 'Smart recommendations',
+              data: recommended,
+              smart: true,
+              summary: getPreferenceSummary(recommendationPreferences),
+            }]
+          : []),
+        ...grouped,
+      ]);
     } finally {
       setLoading(false);
     }
@@ -238,6 +264,14 @@ export default function HomeScreen({ navigation }) {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={renderListHeader}
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, section.smart && styles.smartSectionTitle]}>
+              {section.title}
+            </Text>
+            {section.summary ? <Text style={styles.sectionSummary}>{section.summary}</Text> : null}
+          </View>
+        )}
         stickySectionHeadersEnabled={false}
         refreshing={loading}
         onRefresh={loadApartments}
@@ -281,6 +315,13 @@ export default function HomeScreen({ navigation }) {
                   </View>
                 ))}
               </View>
+              {item.smartMatch ? (
+                <View style={styles.smartMatchBox}>
+                  <Text style={styles.smartMatchText}>
+                    {item.smartMatch.score}% smart match | {item.smartMatch.quality.label}
+                  </Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           );
         }}
@@ -398,6 +439,24 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 28,
   },
+  sectionTitle: {
+    color: '#14213D',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  smartSectionTitle: {
+    color: '#15803D',
+  },
+  sectionHeader: {
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  sectionSummary: {
+    color: '#667085',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -478,6 +537,19 @@ const styles = StyleSheet.create({
   },
   amenityChipText: {
     color: '#14213D',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  smartMatchBox: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 12,
+  },
+  smartMatchText: {
+    color: '#166534',
     fontSize: 12,
     fontWeight: '800',
   },

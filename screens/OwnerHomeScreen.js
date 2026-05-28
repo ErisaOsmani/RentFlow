@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
 import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
 import { registerForPushNotifications } from '../services/pushNotifications';
+import { getMarketAwareListingQualityReport, summarizeOwnerPortfolio } from '../services/sprintFour';
 
 export default function OwnerHomeScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -23,6 +24,7 @@ export default function OwnerHomeScreen({ navigation }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [newBookings, setNewBookings] = useState(0);
+  const portfolioSummary = useMemo(() => summarizeOwnerPortfolio(apartments), [apartments]);
 
   const loadApartments = useCallback(async () => {
     try {
@@ -219,6 +221,17 @@ export default function OwnerHomeScreen({ navigation }) {
           Shto banesa, pershkrime dhe menaxho listing-et e tua me nje pamje me premium.
         </Text>
 
+        <View style={styles.aiSummary}>
+          <View style={styles.aiSummaryItem}>
+            <Text style={styles.aiSummaryLabel}>AI score</Text>
+            <Text style={styles.aiSummaryValue}>{portfolioSummary.averageScore || '-'}</Text>
+          </View>
+          <View style={styles.aiSummaryItem}>
+            <Text style={styles.aiSummaryLabel}>Per permiresim</Text>
+            <Text style={styles.aiSummaryValue}>{portfolioSummary.weakListings.length}</Text>
+          </View>
+        </View>
+
         <View style={styles.ownerActions}>
           <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('AddApartment')}>
             <Text style={styles.primaryButtonText}>Add Apartment</Text>
@@ -275,6 +288,7 @@ export default function OwnerHomeScreen({ navigation }) {
         }
         renderItem={({ item }) => {
           const primaryImageUrl = getPrimaryImageUrl(item.image_url);
+          const qualityReport = getMarketAwareListingQualityReport(item, apartments);
 
           return (
             <View style={styles.card}>
@@ -292,6 +306,25 @@ export default function OwnerHomeScreen({ navigation }) {
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
               <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+              <View style={[
+                styles.qualityBox,
+                qualityReport.risk === 'high' && styles.qualityBoxDanger,
+                qualityReport.risk === 'medium' && styles.qualityBoxWarning,
+              ]}>
+                <Text style={[
+                  styles.qualityText,
+                  qualityReport.risk === 'high' && styles.qualityTextDanger,
+                  qualityReport.risk === 'medium' && styles.qualityTextWarning,
+                ]}>
+                  {qualityReport.score}/100 | {qualityReport.label}
+                </Text>
+                <Text style={styles.qualitySuggestion}>{qualityReport.suggestions[0]}</Text>
+                {qualityReport.marketMedianPrice && qualityReport.comparableCount >= 2 ? (
+                  <Text style={styles.marketText}>
+                    Market median: ${qualityReport.marketMedianPrice} nga {qualityReport.comparableCount} listing-e
+                  </Text>
+                ) : null}
+              </View>
               <View style={styles.amenitiesRow}>
                 {getAmenityLabels(item).slice(0, 4).map((label) => (
                   <Text key={label} style={styles.amenityText}>{label}</Text>
@@ -372,6 +405,28 @@ const styles = StyleSheet.create({
   },
   ownerActions: {
     marginTop: 18,
+  },
+  aiSummary: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  aiSummaryItem: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 14,
+    padding: 14,
+  },
+  aiSummaryLabel: {
+    color: '#D3DAE6',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  aiSummaryValue: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
   },
   ownerActionRow: {
     flexDirection: 'row',
@@ -504,6 +559,45 @@ const styles = StyleSheet.create({
     color: '#14213D',
     marginTop: 12,
     fontWeight: '700',
+  },
+  qualityBox: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 12,
+  },
+  qualityBoxWarning: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  qualityBoxDanger: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  qualityText: {
+    color: '#15803D',
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  qualityTextWarning: {
+    color: '#B45309',
+  },
+  qualityTextDanger: {
+    color: '#D92D20',
+  },
+  qualitySuggestion: {
+    color: '#667085',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  marketText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 6,
   },
   amenitiesRow: {
     flexDirection: 'row',

@@ -36,6 +36,7 @@ import {
   submitApartmentReview,
   toggleFavorite,
 } from '../services/sprintOne';
+import { getListingQualityReport } from '../services/sprintFour';
 
 export default function ApartmentDetailScreen() {
   const navigation = useNavigation();
@@ -240,6 +241,7 @@ export default function ApartmentDetailScreen() {
   const ownerPhone = apartment?.owner_phone || ownerProfile?.phone;
   const amenityLabels = getAmenityLabels(apartment);
   const ownerVerificationLabel = getProfileVerificationLabel(ownerProfile);
+  const qualityReport = getListingQualityReport(apartment);
 
   const openImageViewer = (index) => {
     setViewerIndex(index);
@@ -535,6 +537,29 @@ export default function ApartmentDetailScreen() {
           <Text style={styles.metaLabel}>Type</Text>
           <Text style={styles.metaValue}>{apartment.type || 'Apartment'}</Text>
         </View>
+      </View>
+
+      <View style={[
+        styles.trustBox,
+        qualityReport.risk === 'high' && styles.trustBoxDanger,
+        qualityReport.risk === 'medium' && styles.trustBoxWarning,
+      ]}>
+        <View style={styles.trustHeader}>
+          <Text style={styles.trustTitle}>Smart listing check</Text>
+          <Text style={[
+            styles.trustScore,
+            qualityReport.risk === 'high' && styles.trustScoreDanger,
+            qualityReport.risk === 'medium' && styles.trustScoreWarning,
+          ]}>
+            {qualityReport.score}/100
+          </Text>
+        </View>
+        <Text style={styles.trustLabel}>{qualityReport.label}</Text>
+        {qualityReport.issues.length ? (
+          <Text style={styles.trustText}>{qualityReport.issues.slice(0, 3).join(' | ')}</Text>
+        ) : (
+          <Text style={styles.trustText}>Listing-u ka te dhena te plota per vendimmarrje me te lehte.</Text>
+        )}
       </View>
 
       {amenityLabels.length ? (
@@ -862,6 +887,53 @@ const styles = StyleSheet.create({
     color: '#14213D',
     fontSize: 18,
     fontWeight: '800',
+  },
+  trustBox: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
+  },
+  trustBoxWarning: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  trustBoxDanger: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  trustHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  trustTitle: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  trustScore: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
+  trustScoreWarning: {
+    color: '#B45309',
+  },
+  trustScoreDanger: {
+    color: '#D92D20',
+  },
+  trustLabel: {
+    color: '#14213D',
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  trustText: {
+    color: '#475569',
+    lineHeight: 20,
+    fontWeight: '600',
   },
   section: {
     backgroundColor: '#FFFFFF',

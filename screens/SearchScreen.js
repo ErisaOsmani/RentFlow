@@ -15,6 +15,7 @@ import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 import { AMENITIES, APARTMENT_SELECT_FULL, getAmenityLabels, hasMapLocation } from '../utils/marketplace';
+import { buildSearchPreferences, rankApartmentsSmartly } from '../services/sprintFour';
 
 export default function SearchScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -36,7 +37,7 @@ export default function SearchScreen({ navigation }) {
     try {
       const { data, error } = await supabase
         .from('apartments')
-        .select('city')
+        .select('id, city')
         .order('city', { ascending: true });
 
       if (error) {
@@ -148,7 +149,17 @@ export default function SearchScreen({ navigation }) {
         results = results.filter(hasMapLocation);
       }
 
-      setApartments(results);
+      const preferences = buildSearchPreferences({
+        searchText,
+        selectedCity,
+        locationText,
+        minPrice,
+        maxPrice,
+        minRooms,
+        selectedAmenities,
+      });
+
+      setApartments(rankApartmentsSmartly(results, preferences));
     } finally {
       setLoading(false);
     }
@@ -183,6 +194,14 @@ export default function SearchScreen({ navigation }) {
         </View>
         <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
         <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
+        {item.smartMatch ? (
+          <View style={styles.smartMatchBox}>
+            <Text style={styles.smartMatchScore}>{item.smartMatch.score}% match</Text>
+            <Text style={styles.smartMatchText}>
+              {(item.smartMatch.reasons || []).slice(0, 2).join(' | ') || item.smartMatch.quality.label}
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.cardAmenities}>
           {getAmenityLabels(item).slice(0, 4).map((label) => (
             <Text key={label} style={styles.cardAmenityText}>{label}</Text>
@@ -223,6 +242,9 @@ export default function SearchScreen({ navigation }) {
       <View style={styles.mapPinInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardCity}>{item.address || item.neighborhood || item.city}</Text>
+        {item.smartMatch ? (
+          <Text style={styles.mapMatchText}>{item.smartMatch.score}% match smart</Text>
+        ) : null}
         <Text style={styles.cardMeta}>
           {hasMapLocation(item)
             ? `${Number(item.latitude).toFixed(4)}, ${Number(item.longitude).toFixed(4)}`
@@ -668,6 +690,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
+  smartMatchBox: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+  },
+  smartMatchScore: {
+    color: '#15803D',
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  smartMatchText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   cardAmenities: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -726,6 +766,12 @@ const styles = StyleSheet.create({
   },
   mapPinInfo: {
     flex: 1,
+  },
+  mapMatchText: {
+    color: '#15803D',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
   },
   emptyState: {
     flex: 1,

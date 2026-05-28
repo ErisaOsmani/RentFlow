@@ -11,7 +11,7 @@ Notifications.setNotificationHandler({
 });
 
 export const registerForPushNotifications = async (userId) => {
-  if (!userId || Platform.OS === 'web') {
+  if (!userId) {
     return { token: null, error: null };
   }
 
