@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
@@ -32,6 +33,18 @@ export default function SearchScreen({ navigation }) {
   const [mapOnly, setMapOnly] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [cities, setCities] = useState([]);
+
+  const activeFilterCount = React.useMemo(() => {
+    return [
+      selectedCity,
+      locationText.trim(),
+      minPrice,
+      maxPrice,
+      minRooms,
+      mapOnly,
+      ...selectedAmenities,
+    ].filter(Boolean).length;
+  }, [selectedCity, locationText, minPrice, maxPrice, minRooms, mapOnly, selectedAmenities]);
 
   const loadCities = useCallback(async () => {
     try {
@@ -254,6 +267,115 @@ export default function SearchScreen({ navigation }) {
     </TouchableOpacity>
   );
 
+  const renderFilters = () => (
+    <ScrollView
+      style={styles.filterPanel}
+      contentContainerStyle={styles.filterPanelContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>City</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cityScroll}>
+          <TouchableOpacity
+            style={[styles.filterChip, !selectedCity && styles.filterChipActive]}
+            onPress={() => setSelectedCity('')}
+          >
+            <Text style={[styles.filterChipText, !selectedCity && styles.filterChipTextActive]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          {cities.map((city) => (
+            <TouchableOpacity
+              key={city}
+              style={[styles.filterChip, selectedCity === city && styles.filterChipActive]}
+              onPress={() => setSelectedCity(city)}
+            >
+              <Text style={[styles.filterChipText, selectedCity === city && styles.filterChipTextActive]}>
+                {city}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Location search</Text>
+        <TextInput
+          placeholder="Lagje, adrese ose qytet"
+          placeholderTextColor="#8F97A8"
+          style={styles.filterInput}
+          value={locationText}
+          onChangeText={setLocationText}
+        />
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Price Range (per month)</Text>
+        <View style={styles.filterRow}>
+          <TextInput
+            placeholder="Min"
+            placeholderTextColor="#8F97A8"
+            style={[styles.filterInput, styles.filterInputHalf]}
+            value={minPrice}
+            onChangeText={setMinPrice}
+            keyboardType="numeric"
+          />
+          <TextInput
+            placeholder="Max"
+            placeholderTextColor="#8F97A8"
+            style={[styles.filterInput, styles.filterInputHalf]}
+            value={maxPrice}
+            onChangeText={setMaxPrice}
+            keyboardType="numeric"
+          />
+        </View>
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Minimum Rooms</Text>
+        <TextInput
+          placeholder="Number of rooms"
+          placeholderTextColor="#8F97A8"
+          style={styles.filterInput}
+          value={minRooms}
+          onChangeText={setMinRooms}
+          keyboardType="numeric"
+        />
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Amenities</Text>
+        <View style={styles.amenitiesGrid}>
+          {AMENITIES.map((amenity) => {
+            const selected = selectedAmenities.includes(amenity.key);
+
+            return (
+              <TouchableOpacity
+                key={amenity.key}
+                style={[styles.amenityButton, selected && styles.amenityButtonActive]}
+                onPress={() => toggleAmenity(amenity.key)}
+              >
+                <Text style={[styles.amenityButtonText, selected && styles.amenityButtonTextActive]}>
+                  {amenity.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.mapOnlyButton, mapOnly && styles.mapOnlyButtonActive]}
+        onPress={() => setMapOnly((current) => !current)}
+      >
+        <Text style={[styles.mapOnlyText, mapOnly && styles.mapOnlyTextActive]}>
+          Vetem banesa me lokacion ne harte
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -275,9 +397,11 @@ export default function SearchScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.filterToggleButton}
-        onPress={() => setShowFilters(!showFilters)}
+        onPress={() => setShowFilters(true)}
       >
-        <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
+        <Text style={styles.filterToggleText}>
+          Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.viewSwitch}>
@@ -295,113 +419,43 @@ export default function SearchScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {showFilters && (
-        <ScrollView style={styles.filterPanel} showsVerticalScrollIndicator={false}>
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>City</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cityScroll}>
-              <TouchableOpacity
-                style={[styles.filterChip, !selectedCity && styles.filterChipActive]}
-                onPress={() => setSelectedCity('')}
-              >
-                <Text style={[styles.filterChipText, !selectedCity && styles.filterChipTextActive]}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              {cities.map((city) => (
-                <TouchableOpacity
-                  key={city}
-                  style={[styles.filterChip, selectedCity === city && styles.filterChipActive]}
-                  onPress={() => setSelectedCity(city)}
-                >
-                  <Text style={[styles.filterChipText, selectedCity === city && styles.filterChipTextActive]}>
-                    {city}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Location search</Text>
-            <TextInput
-              placeholder="Lagje, adrese ose qytet"
-              placeholderTextColor="#8F97A8"
-              style={styles.filterInput}
-              value={locationText}
-              onChangeText={setLocationText}
-            />
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Price Range (per month)</Text>
-            <View style={styles.filterRow}>
-              <TextInput
-                placeholder="Min"
-                placeholderTextColor="#8F97A8"
-                style={[styles.filterInput, styles.filterInputHalf]}
-                value={minPrice}
-                onChangeText={setMinPrice}
-                keyboardType="numeric"
-              />
-              <TextInput
-                placeholder="Max"
-                placeholderTextColor="#8F97A8"
-                style={[styles.filterInput, styles.filterInputHalf]}
-                value={maxPrice}
-                onChangeText={setMaxPrice}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Minimum Rooms</Text>
-            <TextInput
-              placeholder="Number of rooms"
-              placeholderTextColor="#8F97A8"
-              style={styles.filterInput}
-              value={minRooms}
-              onChangeText={setMinRooms}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Amenities</Text>
-            <View style={styles.amenitiesGrid}>
-              {AMENITIES.map((amenity) => {
-                const selected = selectedAmenities.includes(amenity.key);
-
-                return (
-                  <TouchableOpacity
-                    key={amenity.key}
-                    style={[styles.amenityButton, selected && styles.amenityButtonActive]}
-                    onPress={() => toggleAmenity(amenity.key)}
-                  >
-                    <Text style={[styles.amenityButtonText, selected && styles.amenityButtonTextActive]}>
-                      {amenity.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
+      <Modal
+        visible={showFilters}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <View style={styles.modalOverlay}>
           <TouchableOpacity
-            style={[styles.mapOnlyButton, mapOnly && styles.mapOnlyButtonActive]}
-            onPress={() => setMapOnly((current) => !current)}
-          >
-            <Text style={[styles.mapOnlyText, mapOnly && styles.mapOnlyTextActive]}>
-              Vetem banesa me lokacion ne harte
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-            <Text style={styles.clearButtonText}>Clear all filters</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowFilters(false)}
+          />
+          <View style={styles.filterSheet}>
+            <View style={styles.filterSheetHandle} />
+            <View style={styles.filterSheetHeader}>
+              <View>
+                <Text style={styles.filterSheetTitle}>Filters</Text>
+                <Text style={styles.filterSheetSubtitle}>
+                  {activeFilterCount ? `${activeFilterCount} active` : 'Choose what you need'}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.sheetCloseButton} onPress={() => setShowFilters(false)}>
+                <Text style={styles.sheetCloseText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            {renderFilters()}
+            <View style={styles.filterSheetActions}>
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+                <Text style={styles.clearButtonText}>Clear all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyButton} onPress={() => setShowFilters(false)}>
+                <Text style={styles.applyButtonText}>Show results</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {loading ? (
         <ActivityIndicator color="#14213D" style={styles.loader} />
@@ -484,6 +538,65 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20, 33, 61, 0.42)',
+  },
+  filterSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    maxHeight: '88%',
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 12,
+  },
+  filterSheetHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D0D5DD',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  filterSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
+  },
+  filterSheetTitle: {
+    color: '#14213D',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  filterSheetSubtitle: {
+    color: '#667085',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  sheetCloseButton: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  sheetCloseText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
   viewSwitch: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -510,13 +623,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   filterPanel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    maxHeight: 340,
+    maxHeight: 470,
+  },
+  filterPanelContent: {
+    paddingBottom: 8,
   },
   filterSection: {
     marginBottom: 20,
@@ -569,11 +679,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE9EA',
     borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
-    marginTop: 10,
+    flex: 1,
   },
   clearButtonText: {
     color: '#D92D20',
+    fontWeight: '800',
+  },
+  filterSheetActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  applyButton: {
+    backgroundColor: '#14213D',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    flex: 1,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
     fontWeight: '800',
   },
   amenitiesGrid: {
