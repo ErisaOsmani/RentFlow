@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
-import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
+import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
 import { getCurrentUser, loadFavoriteApartmentIds, loadUnreadNotificationCount } from '../services/sprintOne';
 import { registerForPushNotifications } from '../services/pushNotifications';
 import {
@@ -257,7 +258,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => String(item.id)}
@@ -298,7 +299,7 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.cardTop}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <View style={styles.priceBadge}>
-                  <Text style={styles.priceBadgeText}>${item.price} / month</Text>
+                  <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)} / month</Text>
                 </View>
               </View>
               <View style={styles.cityBadge}>
@@ -326,7 +327,7 @@ export default function HomeScreen({ navigation }) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -334,7 +335,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    paddingTop: 20,
     paddingHorizontal: 18,
   },
   hero: {
@@ -437,6 +437,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   listContent: {
+    paddingTop: 12,
     paddingBottom: 28,
   },
   sectionTitle: {

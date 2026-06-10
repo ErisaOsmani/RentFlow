@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { getCurrentUser, loadFavoriteApartmentIds } from '../services/sprintOne';
-import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
+import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
 
 export default function FavoritesScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
@@ -85,7 +86,7 @@ export default function FavoritesScreen({ navigation }) {
         {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.cardImage} /> : null}
         <View style={styles.cardTop}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.priceText}>${item.price} / month</Text>
+          <Text style={styles.priceText}>{formatPrice(item.price, item.currency)} / month</Text>
         </View>
         <View style={styles.cityBadge}>
           <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
@@ -101,7 +102,7 @@ export default function FavoritesScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
           <Text style={styles.backChipText}>Back</Text>
@@ -124,7 +125,7 @@ export default function FavoritesScreen({ navigation }) {
           <Text style={styles.emptyText}>Ruaj banesat qe te pelqejne nga faqja e detajeve.</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -132,10 +133,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    padding: 20,
+    paddingHorizontal: 18,
   },
   header: {
-    marginBottom: 22,
+    paddingTop: 10,
+    marginBottom: 18,
   },
   backChip: {
     alignSelf: 'flex-start',
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#D2D8E3',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   backChipText: {
     color: '#14213D',
@@ -160,6 +162,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   listContent: {
+    paddingTop: 2,
     paddingBottom: 28,
   },
   card: {

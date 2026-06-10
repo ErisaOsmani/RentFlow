@@ -10,12 +10,13 @@ import {
   Image,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
-import { APARTMENT_SELECT_FULL, USER_PROFILE_SELECT_FULL, getProfileVerificationLabel } from '../utils/marketplace';
+import { APARTMENT_SELECT_FULL, USER_PROFILE_SELECT_FULL, formatPrice, getProfileVerificationLabel } from '../utils/marketplace';
 import { setProfileVerification } from '../services/sprintTwo';
 
 const TABS = [
@@ -397,10 +398,10 @@ export default function AdminHomeScreen({ navigation }) {
           <Text style={styles.priceBadgeText}>{item.bookings} bookings</Text>
         </View>
       </View>
-      <Text style={styles.metaText}>Qira totale mujore: ${item.totalRent}</Text>
+      <Text style={styles.metaText}>Qira totale mujore: {formatPrice(item.totalRent)}</Text>
       {expandedId === `city-${item.city}` ? (
         <View style={styles.detailsPanel}>
-          <Text style={styles.detailLine}>Mesatarja e qirase: ${item.apartments ? Math.round(item.totalRent / item.apartments) : 0}</Text>
+          <Text style={styles.detailLine}>Mesatarja e qirase: {formatPrice(item.apartments ? Math.round(item.totalRent / item.apartments) : 0)}</Text>
           <Text style={styles.detailLine}>Pjesa e rezervimeve: {bookings.length ? Math.round((item.bookings / bookings.length) * 100) : 0}%</Text>
           <TouchableOpacity
             style={styles.secondaryButtonFull}
@@ -435,7 +436,7 @@ export default function AdminHomeScreen({ navigation }) {
             <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
           </View>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>{item.price ? `$${item.price}` : 'N/A'}</Text>
+            <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)}</Text>
           </View>
         </View>
         <Text style={styles.metaText}>
@@ -641,7 +642,7 @@ export default function AdminHomeScreen({ navigation }) {
           <Text style={styles.statLabel}>Users</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>${stats.monthlyRent}</Text>
+          <Text style={styles.statValue}>{formatPrice(stats.monthlyRent)}</Text>
           <Text style={styles.statLabel}>Qira/muaj</Text>
         </View>
       </View>
@@ -687,24 +688,25 @@ export default function AdminHomeScreen({ navigation }) {
   );
 
   return (
-    <FlatList
-      style={styles.container}
-      data={filteredData}
-      keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={styles.listContent}
-      refreshing={loading}
-      onRefresh={loadAdminData}
-      renderItem={renderItem}
-      ListHeaderComponent={renderHeader}
-      ListEmptyComponent={
-        <View style={styles.emptyState}>
-          {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka te dhena</Text>}
-          <Text style={styles.emptyText}>
-            {loading ? 'Po ngarkohen te dhenat...' : 'Provo me kerkim tjeter ose nderro tab.'}
-          </Text>
-        </View>
-      }
-    />
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={filteredData}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        refreshing={loading}
+        onRefresh={loadAdminData}
+        renderItem={renderItem}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka te dhena</Text>}
+            <Text style={styles.emptyText}>
+              {loading ? 'Po ngarkohen te dhenat...' : 'Provo me kerkim tjeter ose nderro tab.'}
+            </Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
@@ -714,7 +716,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF1F7',
   },
   listContent: {
-    paddingTop: 20,
+    paddingTop: 12,
     paddingHorizontal: 18,
     paddingBottom: 28,
   },

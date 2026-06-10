@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser } from '../services/sprintOne';
 import {
   getOrCreateConversation,
@@ -127,53 +128,55 @@ export default function ChatScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChipText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>Komunikim direkt brenda RentFlow.</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+            <Text style={styles.backChipText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>Komunikim direkt brenda RentFlow.</Text>
+        </View>
 
-      {loading ? (
-        <ActivityIndicator color="#14213D" style={styles.loader} />
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messagesContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Nis biseden</Text>
-              <Text style={styles.emptyText}>Pyet owner-in per kushtet, lagjen ose disponueshmerine.</Text>
-            </View>
-          }
-        />
-      )}
+        {loading ? (
+          <ActivityIndicator color="#14213D" style={styles.loader} />
+        ) : (
+          <FlatList
+            data={messages}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messagesContent}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>Nis biseden</Text>
+                <Text style={styles.emptyText}>Pyet owner-in per kushtet, lagjen ose disponueshmerine.</Text>
+              </View>
+            }
+          />
+        )}
 
-      <View style={styles.composer}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Shkruaj mesazh..."
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          multiline
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={sending}
-        >
-          {sending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        <View style={styles.composer}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Shkruaj mesazh..."
+            placeholderTextColor="#8F97A8"
+            style={styles.input}
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, sending && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={sending}
+          >
+            {sending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -182,9 +185,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EEF1F7',
   },
+  keyboard: {
+    flex: 1,
+  },
   header: {
     backgroundColor: '#14213D',
-    paddingTop: 22,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

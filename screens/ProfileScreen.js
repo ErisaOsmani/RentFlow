@@ -9,6 +9,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { getCurrentUser } from '../services/sprintOne';
 import { loadUserProfile, updateUserProfile } from '../services/sprintTwo';
@@ -104,17 +105,18 @@ export default function ProfileScreen({ navigation }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
-        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChipText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.eyebrow}>TRUST PROFILE</Text>
-        <Text style={styles.title}>My profile</Text>
-        <Text style={styles.subtitle}>Mbaj te dhenat e sakta qe owner-at dhe klientat te kene me shume besim.</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.hero}>
+          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+            <Text style={styles.backChipText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.eyebrow}>TRUST PROFILE</Text>
+          <Text style={styles.title}>My profile</Text>
+          <Text style={styles.subtitle}>Mbaj te dhenat e sakta qe owner-at dhe klientat te kene me shume besim.</Text>
+        </View>
 
-      <View style={styles.statusPanel}>
+        <View style={styles.statusPanel}>
         <Text style={styles.statusLabel}>Verification</Text>
         <Text style={[styles.statusValue, profile?.verified && styles.statusValueVerified]}>
           {getProfileVerificationLabel(profile)}
@@ -124,9 +126,9 @@ export default function ProfileScreen({ navigation }) {
             ? 'Profili yt eshte i verifikuar.'
             : 'Ruaj te dhenat e plota; admini mund ta aprovoje profilin.'}
         </Text>
-      </View>
+        </View>
 
-      <View style={styles.form}>
+        <View style={styles.form}>
         <TextInput
           placeholder="First name"
           placeholderTextColor="#8F97A8"
@@ -158,8 +160,9 @@ export default function ProfileScreen({ navigation }) {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -170,9 +173,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#EEF1F7',
   },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#EEF1F7',
+  },
   container: {
     flexGrow: 1,
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 28,
     backgroundColor: '#EEF1F7',
   },
   hero: {

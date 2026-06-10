@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
-import { APARTMENT_SELECT_FULL, getAmenityLabels } from '../utils/marketplace';
+import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
 import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
 import { registerForPushNotifications } from '../services/pushNotifications';
 import { getMarketAwareListingQualityReport, summarizeOwnerPortfolio } from '../services/sprintFour';
@@ -270,7 +271,7 @@ export default function OwnerHomeScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={apartments}
         keyExtractor={(item) => String(item.id)}
@@ -301,7 +302,7 @@ export default function OwnerHomeScreen({ navigation }) {
                   <Text style={styles.cardCity}>{item.city}</Text>
                 </View>
                 <View style={styles.priceBadge}>
-                  <Text style={styles.priceBadgeText}>${item.price} / month</Text>
+                  <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)} / month</Text>
                 </View>
               </View>
               <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
@@ -321,7 +322,7 @@ export default function OwnerHomeScreen({ navigation }) {
                 <Text style={styles.qualitySuggestion}>{qualityReport.suggestions[0]}</Text>
                 {qualityReport.marketMedianPrice && qualityReport.comparableCount >= 2 ? (
                   <Text style={styles.marketText}>
-                    Market median: ${qualityReport.marketMedianPrice} nga {qualityReport.comparableCount} listing-e
+                    Market median: {formatPrice(qualityReport.marketMedianPrice, item.currency)} nga {qualityReport.comparableCount} listing-e
                   </Text>
                 ) : null}
               </View>
@@ -348,7 +349,7 @@ export default function OwnerHomeScreen({ navigation }) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -356,7 +357,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    paddingTop: 20,
     paddingHorizontal: 18,
   },
   hero: {
@@ -501,6 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   listContent: {
+    paddingTop: 12,
     paddingBottom: 28,
   },
   card: {

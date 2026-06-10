@@ -9,12 +9,15 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Modal,
+  FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 import { parseImageUrls } from '../utils/apartmentImages';
-import { AMENITIES } from '../utils/marketplace';
+import { AMENITIES, CURRENCIES, formatPrice, normalizeCurrency } from '../utils/marketplace';
 import { generateApartmentDescription, getListingQualityReport } from '../services/sprintFour';
 
 const MAX_IMAGES = 10;
@@ -45,6 +48,9 @@ export default function AddApartmentScreen({ navigation, route }) {
       ? String(editingApartment.price)
       : ''
   );
+  const [currency, setCurrency] = useState(normalizeCurrency(editingApartment?.currency));
+  const [currencySearch, setCurrencySearch] = useState('');
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [rooms, setRooms] = useState(
     editingApartment?.rooms !== undefined && editingApartment?.rooms !== null
       ? String(editingApartment.rooms)
@@ -77,6 +83,7 @@ export default function AddApartmentScreen({ navigation, route }) {
       description,
       image_url: imageUrls,
       price,
+      currency,
       rooms,
     };
 
@@ -85,9 +92,24 @@ export default function AddApartmentScreen({ navigation, route }) {
     });
 
     return draft;
-  }, [address, amenities, city, description, imageUrls, neighborhood, price, rooms, title]);
+  }, [address, amenities, city, currency, description, imageUrls, neighborhood, price, rooms, title]);
 
   const qualityReport = useMemo(() => getListingQualityReport(draftApartment), [draftApartment]);
+  const selectedCurrency = useMemo(
+    () => CURRENCIES.find((item) => item.code === normalizeCurrency(currency)) || CURRENCIES.find((item) => item.code === 'USD'),
+    [currency]
+  );
+  const filteredCurrencies = useMemo(() => {
+    const query = currencySearch.trim().toLowerCase();
+
+    if (!query) {
+      return CURRENCIES;
+    }
+
+    return CURRENCIES.filter((item) =>
+      [item.code, item.label, item.symbol, item.countries].some((value) => String(value).toLowerCase().includes(query))
+    );
+  }, [currencySearch]);
 
   const loadOwnerContact = useCallback(async () => {
     if (!editingApartment?.owner_id) {
@@ -197,7 +219,8 @@ export default function AddApartmentScreen({ navigation, route }) {
     parsedPriceValue,
     parsedRoomsValue,
     includeOwnerContact = true,
-    includeMarketplaceFields = true
+    includeMarketplaceFields = true,
+    includeCurrency = true
   ) => {
     const normalizedOwnerName = ownerName.trim();
     const normalizedOwnerPhone = ownerPhone.trim();
@@ -210,6 +233,10 @@ export default function AddApartmentScreen({ navigation, route }) {
       price: parsedPriceValue,
       rooms: parsedRoomsValue,
     };
+
+    if (includeCurrency) {
+      payload.currency = normalizeCurrency(currency);
+    }
 
     if (includeOwnerContact) {
       payload.owner_name = normalizedOwnerName || null;
@@ -239,6 +266,12 @@ export default function AddApartmentScreen({ navigation, route }) {
   const handleGenerateDescription = () => {
     const generatedDescription = generateApartmentDescription(draftApartment);
     setDescription(generatedDescription);
+  };
+
+  const selectCurrency = (item) => {
+    setCurrency(item.code);
+    setCurrencySearch('');
+    setShowCurrencyPicker(false);
   };
 
   const pickImage = async () => {
@@ -388,12 +421,10 @@ export default function AddApartmentScreen({ navigation, route }) {
       }
 
       if (saveResult.error?.code === '42703') {
-        savedOwnerContactOnApartment = false;
-
         if (editingApartment) {
           let updateQuery = supabase
             .from('apartments')
-            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false))
+            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, true, true, false))
             .eq('id', editingApartment.id);
 
           if (!isAdmin) {
@@ -404,7 +435,28 @@ export default function AddApartmentScreen({ navigation, route }) {
         } else {
           saveResult = await supabase
             .from('apartments')
-            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false)]);
+            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, true, true, false)]);
+        }
+      }
+
+      if (saveResult.error?.code === '42703') {
+        savedOwnerContactOnApartment = false;
+
+        if (editingApartment) {
+          let updateQuery = supabase
+            .from('apartments')
+            .update(buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false, false))
+            .eq('id', editingApartment.id);
+
+          if (!isAdmin) {
+            updateQuery = updateQuery.eq('owner_id', authData.user.id);
+          }
+
+          saveResult = await updateQuery;
+        } else {
+          saveResult = await supabase
+            .from('apartments')
+            .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms, false, false, false)]);
         }
       }
 
@@ -433,19 +485,20 @@ export default function AddApartmentScreen({ navigation, route }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
-        <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChipText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.eyebrow}>NEW LISTING</Text>
-        <Text style={styles.title}>{editingApartment ? 'Edit Apartment' : 'Add Apartment'}</Text>
-        <Text style={styles.subtitle}>
-          Shto ose perditeso banese me foto, pershkrim dhe qira mujore.
-        </Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.hero}>
+          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+            <Text style={styles.backChipText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.eyebrow}>NEW LISTING</Text>
+          <Text style={styles.title}>{editingApartment ? 'Edit Apartment' : 'Add Apartment'}</Text>
+          <Text style={styles.subtitle}>
+            Shto ose perditeso banese me foto, pershkrim dhe qira mujore.
+          </Text>
+        </View>
 
-      <View style={styles.card}>
+        <View style={styles.card}>
         <TextInput
           placeholder="Apartment title"
           placeholderTextColor="#8F97A8"
@@ -538,6 +591,18 @@ export default function AddApartmentScreen({ navigation, route }) {
           keyboardType="numeric"
         />
         <TextInput
+          placeholder="Currency, e.g. EUR, USD, €, $, Lek"
+          placeholderTextColor="#8F97A8"
+          value={selectedCurrency?.label || currency}
+          onPressIn={() => setShowCurrencyPicker(true)}
+          style={styles.input}
+          editable={false}
+          autoCapitalize="characters"
+        />
+        {price ? (
+          <Text style={styles.pricePreview}>Preview: {formatPrice(price, currency)} / month</Text>
+        ) : null}
+        <TextInput
           placeholder="Rooms"
           placeholderTextColor="#8F97A8"
           value={rooms}
@@ -609,17 +674,87 @@ export default function AddApartmentScreen({ navigation, route }) {
             </Text>
           )}
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+      <Modal
+        visible={showCurrencyPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyPicker(false)}
+      >
+        <View style={styles.currencyModalOverlay}>
+          <TouchableOpacity
+            style={styles.currencyModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowCurrencyPicker(false)}
+          />
+          <View style={styles.currencySheet}>
+            <View style={styles.currencySheetHandle} />
+            <View style={styles.currencySheetHeader}>
+              <View style={styles.currencySheetTitleWrap}>
+                <Text style={styles.currencySheetTitle}>Choose currency</Text>
+                <Text style={styles.currencySheetSubtitle}>Search by code, currency, country, or symbol</Text>
+              </View>
+              <TouchableOpacity style={styles.currencyCloseButton} onPress={() => setShowCurrencyPicker(false)}>
+                <Text style={styles.currencyCloseText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              placeholder="Search currency..."
+              placeholderTextColor="#8F97A8"
+              value={currencySearch}
+              onChangeText={setCurrencySearch}
+              style={styles.currencySearchInput}
+              autoCapitalize="none"
+            />
+            <FlatList
+              data={filteredCurrencies}
+              keyExtractor={(item) => item.code}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const selected = normalizeCurrency(currency) === item.code;
+
+                return (
+                  <TouchableOpacity
+                    style={[styles.currencyOption, selected && styles.currencyOptionActive]}
+                    onPress={() => selectCurrency(item)}
+                  >
+                    <View style={styles.currencyOptionTextWrap}>
+                      <Text style={[styles.currencyOptionLabel, selected && styles.currencyOptionLabelActive]}>
+                        {item.label}
+                      </Text>
+                      {item.countries ? (
+                        <Text style={[styles.currencyOptionCountry, selected && styles.currencyOptionCountryActive]}>
+                          {item.countries} - {item.code}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.currencyOptionSymbol, selected && styles.currencyOptionSymbolActive]}>
+                      {item.symbol}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#EEF1F7',
+  },
   container: {
     flexGrow: 1,
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 28,
     backgroundColor: '#EEF1F7',
-    justifyContent: 'center',
   },
   hero: {
     backgroundColor: '#14213D',
@@ -671,6 +806,11 @@ const styles = StyleSheet.create({
     borderColor: '#DEE4EF',
     padding: 14,
     borderRadius: 14,
+    marginBottom: 12,
+  },
+  pricePreview: {
+    color: '#667085',
+    fontWeight: '700',
     marginBottom: 12,
   },
   coordinateRow: {
@@ -830,5 +970,122 @@ const styles = StyleSheet.create({
     color: '#667085',
     lineHeight: 20,
     fontWeight: '600',
+  },
+  currencyModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  currencyModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20, 33, 61, 0.42)',
+  },
+  currencySheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    maxHeight: '86%',
+  },
+  currencySheetHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D0D5DD',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  currencySheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  currencySheetTitleWrap: {
+    flex: 1,
+  },
+  currencySheetTitle: {
+    color: '#14213D',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  currencySheetSubtitle: {
+    color: '#667085',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  currencyCloseButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  currencyCloseText: {
+    color: '#14213D',
+    fontWeight: '800',
+  },
+  currencySearchInput: {
+    backgroundColor: '#F5F7FB',
+    borderColor: '#DEE4EF',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    color: '#14213D',
+  },
+  currencyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    gap: 12,
+  },
+  currencyOptionActive: {
+    backgroundColor: '#14213D',
+    borderColor: '#14213D',
+  },
+  currencyOptionTextWrap: {
+    flex: 1,
+  },
+  currencyOptionCode: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  currencyOptionCodeActive: {
+    color: '#FFFFFF',
+  },
+  currencyOptionLabel: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  currencyOptionLabelActive: {
+    color: '#FFFFFF',
+  },
+  currencyOptionCountry: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  currencyOptionCountryActive: {
+    color: '#E2E8F0',
+  },
+  currencyOptionSymbol: {
+    color: '#FF5A5F',
+    fontWeight: '800',
+  },
+  currencyOptionSymbolActive: {
+    color: '#FFFFFF',
   },
 });

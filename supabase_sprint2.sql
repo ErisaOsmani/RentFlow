@@ -6,6 +6,7 @@ alter table public.apartments
   add column if not exists address text,
   add column if not exists latitude double precision,
   add column if not exists longitude double precision,
+  add column if not exists currency text not null default 'USD',
   add column if not exists has_parking boolean not null default false,
   add column if not exists has_wifi boolean not null default false,
   add column if not exists pets_allowed boolean not null default false,

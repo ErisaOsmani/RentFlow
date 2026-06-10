@@ -10,7 +10,9 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
+import { formatPrice } from '../utils/marketplace';
 import { getBillingMonthCount, getMonthlyBookingTotal } from '../utils/bookingPricing';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 import {
@@ -200,21 +202,22 @@ export default function BookingScreen({ route, navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
-          <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
-            <Text style={styles.backChipText}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.eyebrow}>BOOKING</Text>
-          <Text style={styles.title}>{apartment.title}</Text>
-          <Text style={styles.subtitle}>${apartment.price} / month</Text>
-        </View>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.hero}>
+            <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
+              <Text style={styles.backChipText}>Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.eyebrow}>BOOKING</Text>
+            <Text style={styles.title}>{apartment.title}</Text>
+            <Text style={styles.subtitle}>{formatPrice(apartment.price, apartment.currency)} / month</Text>
+          </View>
 
-        <View style={styles.card}>
+          <View style={styles.card}>
           <Text style={styles.sectionTitle}>Choose your stay</Text>
           <View style={styles.locationBox}>
             <Text style={styles.locationLabel}>City</Text>
@@ -237,7 +240,7 @@ export default function BookingScreen({ route, navigation }) {
               {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
             </Text>
             <Text style={styles.summaryLabel}>Estimated total</Text>
-            <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+            <Text style={styles.summaryTotal}>{formatPrice(totalPrice || 0, apartment.currency)}</Text>
           </View>
 
           <TouchableOpacity
@@ -251,9 +254,10 @@ export default function BookingScreen({ route, navigation }) {
               <Text style={styles.buttonText}>Confirm Booking</Text>
             )}
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -262,8 +266,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EEF1F7',
   },
+  keyboard: {
+    flex: 1,
+  },
   content: {
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 28,
   },
   hero: {
     backgroundColor: '#14213D',

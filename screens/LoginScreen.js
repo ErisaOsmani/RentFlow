@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { registerForPushNotifications } from '../services/pushNotifications';
 
@@ -99,68 +101,83 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>RENTFLOW</Text>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>
-          Hyr ne platforme dhe eksploro apartamente me nje pamje me moderne dhe me te qarte.
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <TextInput
-          placeholder="Email"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor="#8F97A8"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          onSubmitEditing={login}
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={login}
-          disabled={loading}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
         >
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Login</Text>}
-        </TouchableOpacity>
+          <View style={styles.hero}>
+            <Text style={styles.eyebrow}>RENTFLOW</Text>
+            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.subtitle}>
+              Hyr ne platforme dhe eksploro apartamente me nje pamje me moderne dhe me te qarte.
+            </Text>
+          </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')} disabled={loading}>
-          <Text style={styles.link}>Create account</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.card}>
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#8F97A8"
+              style={styles.input}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#8F97A8"
+              secureTextEntry
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              onSubmitEditing={login}
+            />
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={login}
+              disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Login</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')} disabled={loading}>
+              <Text style={styles.link}>Create account</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#EEF1F7',
+  },
   container: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#EEF1F7',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   hero: {
     backgroundColor: '#14213D',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 18,
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 14,
   },
   eyebrow: {
     color: '#FCA5A5',
@@ -170,7 +187,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
   },
   subtitle: {
@@ -180,8 +197,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 20,
+    borderRadius: 18,
+    padding: 18,
     shadowColor: '#12213F',
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -192,8 +209,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
     borderColor: '#DEE4EF',
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 12,
+    padding: 13,
     marginBottom: 12,
   },
   button: {

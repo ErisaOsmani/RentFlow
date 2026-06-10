@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getCurrentUser, markNotificationsReadByType } from '../services/sprintOne';
@@ -135,7 +136,7 @@ export default function MessagesScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
           <Text style={styles.backChipText}>Back</Text>
@@ -159,7 +160,7 @@ export default function MessagesScreen({ navigation }) {
           <Text style={styles.emptyText}>Bisedat shfaqen ketu pasi klienti hap chat nga detajet e baneses.</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -167,9 +168,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    padding: 20,
+    paddingHorizontal: 18,
   },
   header: {
+    paddingTop: 10,
     marginBottom: 18,
   },
   backChip: {
@@ -180,7 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#D2D8E3',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   backChipText: {
     color: '#14213D',
@@ -200,6 +202,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   listContent: {
+    paddingTop: 2,
     paddingBottom: 28,
   },
   card: {

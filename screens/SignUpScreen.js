@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { registerForPushNotifications } from '../services/pushNotifications';
 
@@ -138,144 +140,159 @@ export default function SignUpScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>RENTFLOW</Text>
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>
-          Zgjidh rolin tend dhe hyj ne platforme me nje flow me te paster.
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <TextInput
-          placeholder="First name"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={firstName}
-          onChangeText={setFirstName}
-        />
-
-        <TextInput
-          placeholder="Last name"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          value={lastName}
-          onChangeText={setLastName}
-        />
-
-        <TextInput
-          placeholder="Phone number"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-        />
-
-        <TextInput
-          placeholder="Email"
-          placeholderTextColor="#8F97A8"
-          style={styles.input}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor="#8F97A8"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <TextInput
-          placeholder="Confirm Password"
-          placeholderTextColor="#8F97A8"
-          secureTextEntry
-          style={styles.input}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-
-        <View style={styles.roles}>
-          <TouchableOpacity
-            style={[styles.rolePill, role === 'client' && styles.rolePillActive]}
-            onPress={() => setRole('client')}
-          >
-            <Text style={[styles.roleText, role === 'client' && styles.roleTextActive]}>Client</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.rolePill, role === 'owner' && styles.rolePillActive]}
-            onPress={() => setRole('owner')}
-          >
-            <Text style={[styles.roleText, role === 'owner' && styles.roleTextActive]}>Owner</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.rolePill, role === 'admin' && styles.rolePillActive]}
-            onPress={() => setRole('admin')}
-          >
-            <Text style={[styles.roleText, role === 'admin' && styles.roleTextActive]}>Admin</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={signup}
-          disabled={loading}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
         >
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
-        </TouchableOpacity>
+          <View style={styles.hero}>
+            <Text style={styles.eyebrow}>RENTFLOW</Text>
+            <Text style={styles.title}>Create your account</Text>
+            <Text style={styles.subtitle}>
+              Zgjidh rolin tend dhe hyj ne platforme me nje flow me te paster.
+            </Text>
+          </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading}>
-          <Text style={styles.link}>Already have an account? Login</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.card}>
+            <TextInput
+              placeholder="First name"
+              placeholderTextColor="#8F97A8"
+              style={styles.input}
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+
+            <TextInput
+              placeholder="Last name"
+              placeholderTextColor="#8F97A8"
+              style={styles.input}
+              value={lastName}
+              onChangeText={setLastName}
+            />
+
+            <TextInput
+              placeholder="Phone number"
+              placeholderTextColor="#8F97A8"
+              style={styles.input}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+            />
+
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#8F97A8"
+              style={styles.input}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#8F97A8"
+              secureTextEntry
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+            />
+
+            <TextInput
+              placeholder="Confirm Password"
+              placeholderTextColor="#8F97A8"
+              secureTextEntry
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+
+            <View style={styles.roles}>
+              <TouchableOpacity
+                style={[styles.rolePill, role === 'client' && styles.rolePillActive]}
+                onPress={() => setRole('client')}
+              >
+                <Text style={[styles.roleText, role === 'client' && styles.roleTextActive]}>Client</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.rolePill, role === 'owner' && styles.rolePillActive]}
+                onPress={() => setRole('owner')}
+              >
+                <Text style={[styles.roleText, role === 'owner' && styles.roleTextActive]}>Owner</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.rolePill, role === 'admin' && styles.rolePillActive]}
+                onPress={() => setRole('admin')}
+              >
+                <Text style={[styles.roleText, role === 'admin' && styles.roleTextActive]}>Admin</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={signup}
+              disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading}>
+              <Text style={styles.link}>Already have an account? Login</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#EEF1F7',
+  },
   container: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#EEF1F7',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   hero: {
     backgroundColor: '#14213D',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 18,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
   },
   eyebrow: {
     color: '#FCA5A5',
     fontWeight: '700',
     letterSpacing: 1.4,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: '800',
   },
   subtitle: {
     color: '#D3DAE6',
-    marginTop: 8,
-    lineHeight: 20,
+    marginTop: 6,
+    lineHeight: 18,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#12213F',
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -286,20 +303,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
     borderColor: '#DEE4EF',
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 11,
+    marginBottom: 9,
   },
   roles: {
     flexDirection: 'row',
-    gap: 10,
-    marginVertical: 6,
+    gap: 8,
+    marginVertical: 4,
   },
   rolePill: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#DEE4EF',
     backgroundColor: '#F8FAFC',
@@ -316,11 +333,11 @@ const styles = StyleSheet.create({
     color: '#FF5A5F',
   },
   button: {
-    marginTop: 14,
+    marginTop: 10,
     backgroundColor: '#FF5A5F',
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -330,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   link: {
-    marginTop: 16,
+    marginTop: 12,
     textAlign: 'center',
     color: '#14213D',
     fontWeight: '700',

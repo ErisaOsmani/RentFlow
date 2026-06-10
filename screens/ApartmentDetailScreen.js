@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { parseImageUrls, getPrimaryImageUrl } from '../utils/apartmentImages';
@@ -23,6 +24,7 @@ import { openWhatsAppForPhone } from '../utils/whatsapp';
 import {
   getAmenityLabels,
   getProfileVerificationLabel,
+  formatPrice,
   hasMapLocation,
   USER_PROFILE_SELECT_FULL,
 } from '../utils/marketplace';
@@ -478,17 +480,18 @@ export default function ApartmentDetailScreen() {
 
   if (!apartment) {
     return (
-      <View style={styles.emptyContainer}>
+      <SafeAreaView style={styles.emptyContainer}>
         <Text style={styles.emptyText}>Apartment details are not available.</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
@@ -516,7 +519,7 @@ export default function ApartmentDetailScreen() {
           ) : null}
         </View>
         <View style={styles.priceBadge}>
-          <Text style={styles.priceBadgeText}>${apartment.price} / month</Text>
+          <Text style={styles.priceBadgeText}>{formatPrice(apartment.price, apartment.currency)} / month</Text>
         </View>
       </View>
 
@@ -652,7 +655,7 @@ export default function ApartmentDetailScreen() {
                 {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
               </Text>
               <Text style={styles.summaryLabel}>Estimated total</Text>
-              <Text style={styles.summaryTotal}>${totalPrice || 0}</Text>
+              <Text style={styles.summaryTotal}>{formatPrice(totalPrice || 0, apartment.currency)}</Text>
             </View>
 
             <TouchableOpacity
@@ -771,13 +774,20 @@ export default function ApartmentDetailScreen() {
           />
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#EEF1F7',
+  },
   container: {
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 28,
     backgroundColor: '#EEF1F7',
   },
   backButton: {

@@ -1,4 +1,4 @@
-import { AMENITIES, getAmenityLabels } from '../utils/marketplace';
+import { AMENITIES, formatPrice, getAmenityLabels } from '../utils/marketplace';
 import { parseImageUrls } from '../utils/apartmentImages';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -124,7 +124,7 @@ export const generateApartmentDescription = (apartment) => {
   return [
     `${title} ${location ? `ne ${location}` : ''} ofron nje ambient praktik dhe te rehatshem per qendrim mujor.`,
     rooms ? `Ka ${rooms} ${rooms === 1 ? 'dhome' : 'dhoma'} dhe organizim te pershtatshem per banim.` : '',
-    price ? `Qiraja mujore eshte $${price}, me fokus ne vlere dhe lokacion.` : '',
+    price ? `Qiraja mujore eshte ${formatPrice(price, apartment?.currency)}, me fokus ne vlere dhe lokacion.` : '',
     amenityText,
     'Kontakto owner-in per me shume detaje, foto shtese ose vizite.',
   ].filter(Boolean).join(' ');
@@ -276,7 +276,7 @@ export const getPreferenceSummary = (preferences = {}) => {
   }
 
   if (preferences.maxPrice) {
-    parts.push(`deri $${preferences.maxPrice}`);
+    parts.push(`deri ${formatPrice(preferences.maxPrice)}`);
   }
 
   if (preferences.minRooms) {

@@ -12,14 +12,16 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
-import { AMENITIES, APARTMENT_SELECT_FULL, getAmenityLabels, hasMapLocation } from '../utils/marketplace';
+import { AMENITIES, APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels, hasMapLocation } from '../utils/marketplace';
 import { buildSearchPreferences, rankApartmentsSmartly } from '../services/sprintFour';
 
 export default function SearchScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
+  const [resultMode, setResultMode] = useState('exact');
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -76,36 +78,16 @@ export default function SearchScreen({ navigation }) {
   const executeSearch = useCallback(async () => {
     try {
       setLoading(true);
-
-      const buildQuery = (selectFields) => {
-        let query = supabase.from('apartments').select(selectFields);
-
-        if (selectedCity) {
-          query = query.eq('city', selectedCity);
-        }
-
-        if (minPrice && !Number.isNaN(Number(minPrice))) {
-          query = query.gte('price', Number(minPrice));
-        }
-
-        if (maxPrice && !Number.isNaN(Number(maxPrice))) {
-          query = query.lte('price', Number(maxPrice));
-        }
-
-        if (minRooms && !Number.isNaN(Number(minRooms))) {
-          query = query.gte('rooms', Number(minRooms));
-        }
-
-        return query.order('price', { ascending: true });
-      };
-
       const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
       let error = null;
 
       for (const selectFields of selectOptions) {
-        const result = await buildQuery(selectFields);
+        const result = await supabase
+          .from('apartments')
+          .select(selectFields)
+          .order('price', { ascending: true });
 
         if (result.error?.code === '42703') {
           continue;
@@ -128,7 +110,24 @@ export default function SearchScreen({ navigation }) {
         return;
       }
 
-      let results = filterAvailableApartments(data, bookedApartmentIds);
+      const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
+      let results = availableApartments;
+
+      if (selectedCity) {
+        results = results.filter((item) => item.city === selectedCity);
+      }
+
+      if (minPrice && !Number.isNaN(Number(minPrice))) {
+        results = results.filter((item) => Number(item.price) >= Number(minPrice));
+      }
+
+      if (maxPrice && !Number.isNaN(Number(maxPrice))) {
+        results = results.filter((item) => Number(item.price) <= Number(maxPrice));
+      }
+
+      if (minRooms && !Number.isNaN(Number(minRooms))) {
+        results = results.filter((item) => Number(item.rooms) >= Number(minRooms));
+      }
 
       if (searchText.trim()) {
         const searchLower = searchText.toLowerCase();
@@ -172,7 +171,26 @@ export default function SearchScreen({ navigation }) {
         selectedAmenities,
       });
 
-      setApartments(rankApartmentsSmartly(results, preferences));
+      const rankedResults = rankApartmentsSmartly(results, preferences);
+      const hasSearchCriteria = Boolean(
+        searchText.trim() ||
+          selectedCity ||
+          locationText.trim() ||
+          minPrice ||
+          maxPrice ||
+          minRooms ||
+          selectedAmenities.length ||
+          mapOnly
+      );
+
+      if (rankedResults.length || !hasSearchCriteria) {
+        setResultMode('exact');
+        setApartments(rankedResults);
+        return;
+      }
+
+      setResultMode('similar');
+      setApartments(rankApartmentsSmartly(availableApartments, preferences).slice(0, 8));
     } finally {
       setLoading(false);
     }
@@ -199,7 +217,7 @@ export default function SearchScreen({ navigation }) {
         <View style={styles.cardTop}>
           <Text style={styles.cardTitle}>{item.title}</Text>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>${item.price} / month</Text>
+            <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)} / month</Text>
           </View>
         </View>
         <View style={styles.cityBadge}>
@@ -250,7 +268,7 @@ export default function SearchScreen({ navigation }) {
       onPress={() => navigation.navigate('ApartmentDetail', { apartment: item })}
     >
       <View style={styles.mapPinMarker}>
-        <Text style={styles.mapPinMarkerText}>${item.price}</Text>
+        <Text style={styles.mapPinMarkerText}>{formatPrice(item.price, item.currency)}</Text>
       </View>
       <View style={styles.mapPinInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
@@ -266,6 +284,36 @@ export default function SearchScreen({ navigation }) {
       </View>
     </TouchableOpacity>
   );
+
+  const renderResultsHeader = () => {
+    const showMapHeader = viewMode === 'map';
+    const showSimilarHeader = resultMode === 'similar' && apartments.length > 0;
+
+    if (!showMapHeader && !showSimilarHeader) {
+      return null;
+    }
+
+    return (
+      <>
+        {showSimilarHeader ? (
+          <View style={styles.similarNotice}>
+            <Text style={styles.similarNoticeTitle}>No exact matches</Text>
+            <Text style={styles.similarNoticeText}>
+              Po te shfaqim banesa te ngjashme me kerkimin tend.
+            </Text>
+          </View>
+        ) : null}
+        {showMapHeader ? (
+          <View style={styles.mapPreview}>
+            <Text style={styles.mapPreviewTitle}>Map view</Text>
+            <Text style={styles.mapPreviewText}>
+              {apartments.filter(hasMapLocation).length} listings kane koordinata reale. Hap detajet per Google Maps.
+            </Text>
+          </View>
+        ) : null}
+      </>
+    );
+  };
 
   const renderFilters = () => (
     <ScrollView
@@ -377,7 +425,7 @@ export default function SearchScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Back</Text>
@@ -465,24 +513,15 @@ export default function SearchScreen({ navigation }) {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           renderItem={viewMode === 'map' ? renderMapPin : renderApartment}
-          ListHeaderComponent={
-            viewMode === 'map' ? (
-              <View style={styles.mapPreview}>
-                <Text style={styles.mapPreviewTitle}>Map view</Text>
-                <Text style={styles.mapPreviewText}>
-                  {apartments.filter(hasMapLocation).length} listings kane koordinata reale. Hap detajet per Google Maps.
-                </Text>
-              </View>
-            ) : null
-          }
+          ListHeaderComponent={renderResultsHeader}
         />
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No apartments found</Text>
-          <Text style={styles.emptyText}>Try adjusting your search filters.</Text>
+          <Text style={styles.emptyText}>Nuk ka banesa te lira per momentin.</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -490,10 +529,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    padding: 20,
+    paddingHorizontal: 18,
   },
   header: {
-    marginBottom: 20,
+    paddingTop: 10,
+    marginBottom: 14,
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -503,7 +543,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#D2D8E3',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   backButtonText: {
     color: '#14213D',
@@ -511,7 +551,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#14213D',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
   },
   searchBox: {
@@ -755,6 +795,25 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 28,
+  },
+  similarNotice: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  similarNoticeTitle: {
+    color: '#14213D',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  similarNoticeText: {
+    color: '#667085',
+    fontWeight: '700',
+    lineHeight: 20,
   },
   card: {
     backgroundColor: '#FFFFFF',

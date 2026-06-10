@@ -8,6 +8,7 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
@@ -276,7 +277,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backChip} onPress={() => navigation.goBack()}>
           <Text style={styles.backChipText}>Back</Text>
@@ -299,7 +300,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
           <Text style={styles.emptyText}>Your apartments do not have reservations yet.</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -307,10 +308,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF1F7',
-    padding: 20,
+    paddingHorizontal: 18,
   },
   header: {
-    marginBottom: 22,
+    paddingTop: 10,
+    marginBottom: 18,
   },
   backChip: {
     alignSelf: 'flex-start',
@@ -320,7 +322,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#D2D8E3',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   backChipText: {
     color: '#14213D',
@@ -335,6 +337,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   listContent: {
+    paddingTop: 2,
     paddingBottom: 28,
   },
   card: {
