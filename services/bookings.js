@@ -1,18 +1,23 @@
 import { supabase } from './supabase';
 import { sendPushNotificationToUser } from './pushNotifications';
 
+// Kodet qe tregojne se tabela/kolona mungon ne Supabase.
 const MISSING_SCHEMA_CODES = new Set(['42P01', '42703']);
+// Kodi per konflikt booking-u kur databaza ka constraint per datat.
 const BOOKING_CONFLICT_CODES = new Set(['23P01']);
 
+// Helper-a per te trajtuar gabime te njohura pa prishur gjithe app-in.
 export const isMissingSchemaError = (error) => Boolean(error && MISSING_SCHEMA_CODES.has(error.code));
 
 export const isBookingConflictError = (error) => Boolean(error && BOOKING_CONFLICT_CODES.has(error.code));
 
+// Kthen user-in aktual nga Supabase Auth.
 export const getCurrentUser = async () => {
   const { data, error } = await supabase.auth.getUser();
   return { user: data?.user || null, error };
 };
 
+// Krijon njoftim ne databaze dhe tenton edhe push notification.
 export const createNotification = async ({
   userId,
   title,
@@ -47,6 +52,7 @@ export const createNotification = async ({
   return { error: isMissingSchemaError(error) ? null : error };
 };
 
+// Ngarkon njoftimet e user-it, me fallback nese tabela nuk ekziston.
 export const loadNotifications = async (userId) => {
   const { data, error } = await supabase
     .from('notifications')
@@ -61,6 +67,7 @@ export const loadNotifications = async (userId) => {
   return { notifications: data || [], error, unavailable: false };
 };
 
+// Numeron njoftimet e palexuara, opsionalisht vetem per nje tip.
 export const loadUnreadNotificationCount = async (userId, type = null) => {
   let query = supabase
     .from('notifications')
@@ -81,6 +88,7 @@ export const loadUnreadNotificationCount = async (userId, type = null) => {
   return { count: count || 0, error, unavailable: false };
 };
 
+// Shenon nje njoftim si te lexuar.
 export const markNotificationRead = async (notificationId) => {
   const { error } = await supabase
     .from('notifications')
@@ -90,6 +98,7 @@ export const markNotificationRead = async (notificationId) => {
   return { error: isMissingSchemaError(error) ? null : error };
 };
 
+// Shenon si te lexuara te gjitha njoftimet e nje tipi.
 export const markNotificationsReadByType = async (userId, type) => {
   const { error } = await supabase
     .from('notifications')
@@ -101,6 +110,7 @@ export const markNotificationsReadByType = async (userId, type) => {
   return { error: isMissingSchemaError(error) ? null : error };
 };
 
+// Merr vetem ID-te e apartamenteve favorite per nje user.
 export const loadFavoriteApartmentIds = async (userId) => {
   const { data, error } = await supabase
     .from('favorites')
@@ -118,6 +128,7 @@ export const loadFavoriteApartmentIds = async (userId) => {
   };
 };
 
+// Shton ose largon nje apartament nga favorites.
 export const toggleFavorite = async ({ userId, apartmentId, isFavorite }) => {
   if (isFavorite) {
     const { error } = await supabase
@@ -137,6 +148,7 @@ export const toggleFavorite = async ({ userId, apartmentId, isFavorite }) => {
   return { isFavorite: true, error: isMissingSchemaError(error) ? null : error };
 };
 
+// Merr reviews dhe llogarit mesataren e rating.
 export const loadReviewData = async (apartmentId) => {
   const { data, error } = await supabase
     .from('reviews')
@@ -155,6 +167,7 @@ export const loadReviewData = async (apartmentId) => {
   return { reviews, averageRating, reviewCount: reviews.length, error, unavailable: false };
 };
 
+// Ruaj ose perditeson review-n e user-it per nje apartament.
 export const submitApartmentReview = async ({ userId, apartmentId, rating, comment }) => {
   const payload = {
     user_id: userId,
@@ -170,6 +183,7 @@ export const submitApartmentReview = async ({ userId, apartmentId, rating, comme
   return { error: isMissingSchemaError(error) ? null : error };
 };
 
+// Provon disa forma select-i per booking, sepse skema mund te kete kolona opsionale.
 export const selectBookings = async (queryBuilder) => {
   const selectOptions = [
     'id, start_date, end_date, status, cancelled_at, cancelled_by, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
@@ -191,6 +205,7 @@ export const selectBookings = async (queryBuilder) => {
   return queryBuilder(selectOptions[selectOptions.length - 1]);
 };
 
+// Kthen booking-et qe mbivendosen me periudhen e zgjedhur.
 export const getBlockingBookings = async ({ apartmentId, startDate, endDate }) => {
   const result = await selectBookings((selectFields) =>
     supabase
@@ -213,6 +228,7 @@ export const getBlockingBookings = async ({ apartmentId, startDate, endDate }) =
   return { bookings, error: null };
 };
 
+// Krijon booking duke provuar payload-e te ndryshme per kompatibilitet me databazen.
 export const createBooking = async (payload) => {
   const basicPayload = {
     user_id: payload.user_id,
@@ -266,6 +282,7 @@ export const createBooking = async (payload) => {
   return { booking: null, error: { message: 'The booking was not saved. Check the bookings table columns.' } };
 };
 
+// Perditeson statusin e booking-ut dhe, kur eshte cancellation, ruan kush e anuloi.
 export const updateBookingStatus = async ({ bookingId, status, cancelledBy = null }) => {
   const payloadOptions = [
     {

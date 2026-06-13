@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { supabase } from './supabase';
 
+// Percakton si sillet app-i kur pranon notification ne foreground.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -10,6 +11,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Kerkon leje per push notifications dhe ruan Expo token ne profilin e user-it.
 export const registerForPushNotifications = async (userId) => {
   if (!userId) {
     return { token: null, error: null };
@@ -28,6 +30,7 @@ export const registerForPushNotifications = async (userId) => {
       return { token: null, error: null };
     }
 
+    // Android ka nevoje per channel qe notification te shfaqet si duhet.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'RentFlow',
@@ -53,6 +56,7 @@ export const registerForPushNotifications = async (userId) => {
   }
 };
 
+// Lexon token-in e user-it dhe dergon push notification permes Expo API.
 export const sendPushNotificationToUser = async ({ userId, title, body, data = {} }) => {
   if (!userId) {
     return { error: null };

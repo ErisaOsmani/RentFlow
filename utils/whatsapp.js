@@ -1,5 +1,6 @@
 import { Alert, Linking } from 'react-native';
 
+// Normalizon numrin dhe hap WhatsApp me linkun wa.me.
 export const openWhatsAppForPhone = async (phone) => {
   const normalizedPhone = String(phone || '').trim();
   const digitsOnly = normalizedPhone.replace(/[^\d]/g, '').replace(/^00/, '');

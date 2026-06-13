@@ -15,13 +15,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { registerForPushNotifications } from '../services/pushNotifications';
 
+// Ky screen menaxhon hyrjen ne aplikacion dhe navigimin sipas rolit te perdoruesit.
 export default function LoginScreen({ navigation }) {
+  // State-et ruajne te dhenat qe shkruhen ne forme dhe gjendjen loading.
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Kontroll i thjeshte qe email-i te kete format te vlefshem para login-it.
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
+  // Kryen login me Supabase, krijon profil default nese mungon dhe hap dashboard-in perkates.
   const login = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
@@ -84,6 +88,7 @@ export default function LoginScreen({ navigation }) {
         profile = { role: 'client', email: normalizedEmail };
       }
 
+      // Roli i profilit vendos ekranin ku dergohet perdoruesi pas hyrjes.
       const targetScreen =
         profile?.role === 'admin' ? 'AdminHome' : profile?.role === 'owner' ? 'OwnerHome' : 'Home';
 
@@ -159,6 +164,7 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
+// Stilet percaktojne pamjen e formes, butonave dhe gjendjeve loading.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

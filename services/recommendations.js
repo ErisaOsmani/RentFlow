@@ -1,10 +1,13 @@
 import { AMENITIES, formatPrice, getAmenityLabels } from '../utils/marketplace';
 import { parseImageUrls } from '../utils/apartmentImages';
 
+// Helper per ta mbajtur score-in brenda kufijve 0-100.
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
+// Normalizon tekstin per krahasime search/ranking.
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
+// Kthen numer te sigurte edhe kur vlera vjen si string nga input/database.
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -19,6 +22,7 @@ const toOptionalNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// Kontrollon nese query gjendet ne titull, pershkrim ose lokacion.
 const hasTextMatch = (apartment, query) => {
   const normalizedQuery = normalizeText(query);
 
@@ -35,6 +39,7 @@ const hasTextMatch = (apartment, query) => {
   ].some((value) => normalizeText(value).includes(normalizedQuery));
 };
 
+// Vlereson cilesine e nje listing me score, probleme dhe sugjerime.
 export const getListingQualityReport = (apartment) => {
   const imageCount = parseImageUrls(apartment?.image_url).length;
   const descriptionLength = String(apartment?.description || '').trim().length;
@@ -109,6 +114,7 @@ export const getListingQualityReport = (apartment) => {
   };
 };
 
+// Gjeneron pershkrim bazik nga te dhenat e apartamentit.
 export const generateApartmentDescription = (apartment) => {
   const title = String(apartment?.title || 'This apartment').trim();
   const city = String(apartment?.city || '').trim();
@@ -130,6 +136,7 @@ export const generateApartmentDescription = (apartment) => {
   ].filter(Boolean).join(' ');
 };
 
+// Kthen filtrat e search-it ne objekt preference per ranking.
 export const buildSearchPreferences = ({
   searchText = '',
   selectedCity = '',
@@ -148,6 +155,7 @@ export const buildSearchPreferences = ({
   amenities: selectedAmenities,
 });
 
+// Gjen vleren me te shpeshte ne nje liste apartamentesh.
 const getMostCommonValue = (items, key) => {
   const counts = items.reduce((acc, item) => {
     const value = String(item?.[key] || '').trim();
@@ -163,6 +171,7 @@ const getMostCommonValue = (items, key) => {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
 };
 
+// Llogarit medianen per cmime/dhoma, duke injoruar vlerat jo valide.
 const getMedianNumber = (values) => {
   const sortedValues = values
     .map((value) => Number(value))
@@ -176,6 +185,7 @@ const getMedianNumber = (values) => {
   return sortedValues[Math.floor(sortedValues.length / 2)];
 };
 
+// Gjen apartamente te ngjashme ne te njejtin qytet dhe me numer dhomash te afert.
 const getComparableApartments = (apartment, marketApartments = []) => {
   const city = normalizeText(apartment?.city);
   const rooms = toNumber(apartment?.rooms);
@@ -197,6 +207,7 @@ const getComparableApartments = (apartment, marketApartments = []) => {
   });
 };
 
+// E ul score-in nese cmimi eshte shume larg tregut lokal.
 export const getMarketAwareListingQualityReport = (apartment, marketApartments = []) => {
   const report = getListingQualityReport(apartment);
   const price = toNumber(apartment?.price);
@@ -240,6 +251,7 @@ export const getMarketAwareListingQualityReport = (apartment, marketApartments =
   };
 };
 
+// Nderton preferenca nga apartamentet qe user-i i ka pelqyer/favorizuar.
 export const buildPreferencesFromApartments = (apartments = []) => {
   const city = getMostCommonValue(apartments, 'city');
   const locationText = getMostCommonValue(apartments, 'neighborhood') || getMostCommonValue(apartments, 'address');
@@ -268,6 +280,7 @@ export const buildPreferencesFromApartments = (apartments = []) => {
   };
 };
 
+// Krijon tekst te shkurter per te shpjeguar pse po rekomandohen apartamentet.
 export const getPreferenceSummary = (preferences = {}) => {
   const parts = [];
 
@@ -290,6 +303,7 @@ export const getPreferenceSummary = (preferences = {}) => {
   return parts.length ? parts.join(' | ') : 'Based on quality, price, and listing completeness';
 };
 
+// Llogarit sa mire perputhet nje apartament me preferencat e user-it.
 export const scoreApartmentMatch = (apartment, preferences = {}) => {
   let score = 45;
   const reasons = [];
@@ -358,6 +372,7 @@ export const scoreApartmentMatch = (apartment, preferences = {}) => {
   };
 };
 
+// Rendit apartamentet nga match me i mire te me i dobet.
 export const rankApartmentsSmartly = (apartments, preferences = {}) =>
   [...apartments]
     .map((apartment) => ({
@@ -374,6 +389,7 @@ export const rankApartmentsSmartly = (apartments, preferences = {}) =>
       return toNumber(a.price) - toNumber(b.price);
     });
 
+// Kthen nje numer te kufizuar rekomandimesh, duke shmangur favorite ekzistuese kur ka mundesi.
 export const getRecommendedApartments = (apartments, preferences = {}, limit = 6) => {
   const rankedApartments = rankApartmentsSmartly(apartments, preferences);
   const excludedIds = new Set((preferences.excludeApartmentIds || []).map(String));
@@ -382,6 +398,7 @@ export const getRecommendedApartments = (apartments, preferences = {}, limit = 6
   return (freshRecommendations.length ? freshRecommendations : rankedApartments).slice(0, limit);
 };
 
+// Jep permbledhje per pronarin: score mesatar dhe listime qe duan permiresim.
 export const summarizeOwnerPortfolio = (apartments) => {
   const reports = apartments.map((apartment) => ({
     apartment,

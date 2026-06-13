@@ -15,18 +15,22 @@ import { supabase } from '../services/supabase';
 import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
-import { getCurrentUser, loadUnreadNotificationCount } from '../services/sprintOne';
+import { getCurrentUser, loadUnreadNotificationCount } from '../services/bookings';
 import { registerForPushNotifications } from '../services/pushNotifications';
-import { getMarketAwareListingQualityReport, summarizeOwnerPortfolio } from '../services/sprintFour';
+import { getMarketAwareListingQualityReport, summarizeOwnerPortfolio } from '../services/recommendations';
 
+// OwnerHomeScreen eshte dashboard-i i pronarit per listimet, booking-et dhe mesazhet.
 export default function OwnerHomeScreen({ navigation }) {
+  // State-et ruajne apartamentet e pronarit, loading, logout dhe badge-et e njoftimeve.
   const [apartments, setApartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [newBookings, setNewBookings] = useState(0);
+  // Permbledhja tregon cilesine mesatare te listimeve te pronarit.
   const portfolioSummary = useMemo(() => summarizeOwnerPortfolio(apartments), [apartments]);
 
+  // Merr vetem apartamentet qe i perkasin pronarit aktual.
   const loadApartments = useCallback(async () => {
     try {
       setLoading(true);
@@ -36,6 +40,7 @@ export default function OwnerHomeScreen({ navigation }) {
         return;
       }
 
+      // Select-e alternative per kompatibilitet me databaza qe kane kolona te ndryshme.
       const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
@@ -68,6 +73,7 @@ export default function OwnerHomeScreen({ navigation }) {
     }
   }, []);
 
+  // Fshin apartamentin pas konfirmimit.
   const handleDelete = (apartmentId) => {
     Alert.alert('Delete', 'Are you sure you want to delete this apartment?', [
       { text: 'Cancel', style: 'cancel' },
@@ -94,6 +100,7 @@ export default function OwnerHomeScreen({ navigation }) {
     }, [loadApartments])
   );
 
+  // Merr numrin e mesazheve te palexuara per pronarin.
   const loadUnreadMessages = useCallback(async () => {
     const { user } = await getCurrentUser();
 
@@ -110,6 +117,7 @@ export default function OwnerHomeScreen({ navigation }) {
     }
   }, []);
 
+  // Merr numrin e kerkesave te reja per booking.
   const loadNewBookings = useCallback(async () => {
     const { user } = await getCurrentUser();
 
@@ -135,6 +143,7 @@ export default function OwnerHomeScreen({ navigation }) {
     let channel = null;
     let mounted = true;
 
+    // Subscription real-time rifreskon badge-et per chat dhe booking.
     const subscribeToNotifications = async () => {
       const { user } = await getCurrentUser();
 
@@ -177,6 +186,7 @@ export default function OwnerHomeScreen({ navigation }) {
     };
   }, [loadNewBookings, loadUnreadMessages]);
 
+  // Mbyll sesionin dhe e kthen pronarin ne Login.
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -202,6 +212,7 @@ export default function OwnerHomeScreen({ navigation }) {
     ]);
   };
 
+  // Header-i permban statistika, veprime dhe hyrjet ne bookings/messages.
   const renderListHeader = () => (
     <>
       <View style={styles.hero}>
@@ -353,6 +364,7 @@ export default function OwnerHomeScreen({ navigation }) {
   );
 }
 
+// Stilet per dashboard-in e pronarit, kartat e listimeve dhe badge-et.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

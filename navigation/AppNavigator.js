@@ -21,8 +21,10 @@ import MessagesScreen from '../screens/MessagesScreen';
 import AddApartmentScreen from '../screens/AddApartmentScreen';
 import ApartmentDetailScreen from '../screens/ApartmentDetailScreen';
 
+// Stack navigator mban te gjitha ekranet dhe percakton emrat per navigation.navigate.
 const Stack = createNativeStackNavigator();
 
+// NavigationContainer mbeshtjell app-in dhe Stack.Screen regjistron cdo faqe te aplikacionit.
 export default function AppNavigator() {
   return (
     <NavigationContainer>

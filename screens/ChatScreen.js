@@ -12,16 +12,19 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCurrentUser } from '../services/sprintOne';
+import { getCurrentUser } from '../services/bookings';
 import {
   getOrCreateConversation,
   loadConversationMessages,
   sendConversationMessage,
-} from '../services/sprintTwo';
+} from '../services/messages';
 
+// ChatScreen hap ose krijon nje bisede per apartamentin dhe shfaq mesazhet.
 export default function ChatScreen({ navigation, route }) {
+  // Parametrat mund te vijne nga ApartmentDetail ose nga lista e bisedave.
   const apartment = route.params?.apartment;
   const providedConversation = route.params?.conversation || null;
+  // State-et ruajne biseden aktive, mesazhet, draft-in dhe gjendjet loading/sending.
   const [conversation, setConversation] = useState(providedConversation);
   const [messages, setMessages] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -29,8 +32,10 @@ export default function ChatScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+  // Titulli i chat-it bazohet ne apartamentin perkates.
   const title = useMemo(() => apartment?.title || 'RentFlow chat', [apartment?.title]);
 
+  // Siguron biseden aktive dhe ngarkon mesazhet ekzistuese.
   const loadChat = useCallback(async () => {
     try {
       setLoading(true);
@@ -44,6 +49,7 @@ export default function ChatScreen({ navigation, route }) {
 
       setCurrentUserId(user.id);
 
+      // Nese nuk ka bisede ekzistuese, krijohet nje e re mes klientit dhe pronarit.
       let activeConversation = providedConversation;
 
       if (!activeConversation) {
@@ -85,6 +91,7 @@ export default function ChatScreen({ navigation, route }) {
     loadChat();
   }, [loadChat]);
 
+  // Dergon mesazhin dhe e shton ne liste pa pritur reload komplet.
   const handleSend = async () => {
     if (!conversation?.id || !currentUserId) {
       return;
@@ -112,6 +119,7 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
+  // Renderon mesazhin majtas/djathtas varesisht nese eshte i user-it aktual.
   const renderMessage = ({ item }) => {
     const isMine = item.sender_id === currentUserId;
 
@@ -180,6 +188,7 @@ export default function ChatScreen({ navigation, route }) {
   );
 }
 
+// Stilet per header-in, listen e mesazheve dhe composer-in.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

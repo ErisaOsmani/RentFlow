@@ -16,23 +16,27 @@ import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
-import { getCurrentUser, loadFavoriteApartmentIds, loadUnreadNotificationCount } from '../services/sprintOne';
+import { getCurrentUser, loadFavoriteApartmentIds, loadUnreadNotificationCount } from '../services/bookings';
 import { registerForPushNotifications } from '../services/pushNotifications';
 import {
   buildPreferencesFromApartments,
   getPreferenceSummary,
   getRecommendedApartments,
-} from '../services/sprintFour';
+} from '../services/recommendations';
 
+// HomeScreen eshte dashboard-i i klientit me apartamente, rekomandime dhe njoftime.
 export default function HomeScreen({ navigation }) {
+  // State-et ruajne seksionet e listes, loading dhe numrin e mesazheve te palexuara.
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  // Ngarkon apartamentet, largon ato te zena dhe krijon seksione sipas rekomandimeve/qyteteve.
   const loadApartments = useCallback(async () => {
     try {
       setLoading(true);
+      // Provohen disa select-e qe app-i te vazhdoje edhe kur disa kolona mungojne ne DB.
       const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
@@ -66,6 +70,7 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
+      // Vetem apartamentet e lira shfaqen ne home.
       const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
       const { user } = await getCurrentUser();
       let recommendationPreferences = {};
@@ -77,6 +82,7 @@ export default function HomeScreen({ navigation }) {
         recommendationPreferences = buildPreferencesFromApartments(favoriteApartments);
       }
 
+      // Rekomandimet bazohen ne favorite ose ne cilesine e listimeve.
       const recommended = getRecommendedApartments(availableApartments, recommendationPreferences, 4);
 
       const grouped = availableApartments.reduce((acc, item) => {
@@ -114,6 +120,7 @@ export default function HomeScreen({ navigation }) {
     }, [loadApartments])
   );
 
+  // Merr numrin e mesazheve te palexuara per badge-in ne header.
   const loadUnreadMessages = useCallback(async () => {
     const { user } = await getCurrentUser();
 
@@ -140,6 +147,7 @@ export default function HomeScreen({ navigation }) {
     let channel = null;
     let mounted = true;
 
+    // Lidhja real-time rifreskon badge-in kur ndryshon tabela notifications.
     const subscribeToNotifications = async () => {
       const { user } = await getCurrentUser();
 
@@ -178,6 +186,7 @@ export default function HomeScreen({ navigation }) {
     };
   }, [loadUnreadMessages]);
 
+  // Logout me konfirmim qe te shmanget dalja aksidentale.
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -206,6 +215,7 @@ export default function HomeScreen({ navigation }) {
     ]);
   };
 
+  // Header-i permban navigimin e shpejte per search, favorite, mesazhe dhe profil.
   const renderListHeader = () => (
     <View style={styles.hero}>
       <View style={styles.heroTop}>
@@ -331,6 +341,7 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
+// Stilet organizojne kartat, seksionet, header-in dhe badge-et.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

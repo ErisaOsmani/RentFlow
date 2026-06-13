@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
-import { getCurrentUser } from '../services/sprintOne';
-import { loadUserProfile, updateUserProfile } from '../services/sprintTwo';
+import { getCurrentUser } from '../services/bookings';
+import { loadUserProfile, updateUserProfile } from '../services/messages';
 import { getProfileVerificationLabel } from '../utils/marketplace';
 
+// ProfileScreen lejon user-in te plotesoje te dhenat dhe statusin e verifikimit.
 export default function ProfileScreen({ navigation }) {
+  // State-et ruajne profilin, fushat editable dhe gjendjet loading/saving.
   const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -23,6 +25,7 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Merr profilin aktual nga Supabase dhe e vendos ne forme.
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -54,6 +57,7 @@ export default function ProfileScreen({ navigation }) {
     loadProfile();
   }, [loadProfile]);
 
+  // Ruaj ndryshimet dhe e vendos profilin ne pritje per verifikim.
   const handleSave = async () => {
     if (!profile?.id) {
       return;
@@ -85,6 +89,7 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  // Del nga llogaria dhe kthen user-in te Login.
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -96,6 +101,7 @@ export default function ProfileScreen({ navigation }) {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
+  // Gjendje loading kur profili ende nuk eshte marre.
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -166,6 +172,7 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
+// Stilet per profilin, statusin e verifikimit dhe formen.
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,

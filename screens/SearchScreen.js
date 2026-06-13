@@ -17,9 +17,11 @@ import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { filterAvailableApartments, getActiveBookedApartmentIds } from '../utils/apartmentAvailability';
 import { AMENITIES, APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels, hasMapLocation } from '../utils/marketplace';
-import { buildSearchPreferences, rankApartmentsSmartly } from '../services/sprintFour';
+import { buildSearchPreferences, rankApartmentsSmartly } from '../services/recommendations';
 
+// SearchScreen sherben per kerkim, filtrim dhe renditje inteligjente te apartamenteve.
 export default function SearchScreen({ navigation }) {
+  // State-et ruajne rezultatet, filtrat dhe menyren si shfaqen rezultatet.
   const [apartments, setApartments] = useState([]);
   const [resultMode, setResultMode] = useState('exact');
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,7 @@ export default function SearchScreen({ navigation }) {
   const [viewMode, setViewMode] = useState('list');
   const [cities, setCities] = useState([]);
 
+  // Llogarit sa filtra jane aktiv per te shfaqur numer ne butonin e filtrave.
   const activeFilterCount = React.useMemo(() => {
     return [
       selectedCity,
@@ -48,6 +51,7 @@ export default function SearchScreen({ navigation }) {
     ].filter(Boolean).length;
   }, [selectedCity, locationText, minPrice, maxPrice, minRooms, mapOnly, selectedAmenities]);
 
+  // Merr qytetet nga apartamentet e lira qe perdoruesi te filtroje me lehte.
   const loadCities = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -75,9 +79,11 @@ export default function SearchScreen({ navigation }) {
     }
   }, []);
 
+  // Merr apartamentet nga Supabase, aplikon filtrat dhe i rendit sipas preferences.
   const executeSearch = useCallback(async () => {
     try {
       setLoading(true);
+      // Select-et alternative ndihmojne kur databaza nuk i ka ende te gjitha kolonat.
       const selectOptions = APARTMENT_SELECT_FULL;
 
       let data = [];
@@ -110,6 +116,7 @@ export default function SearchScreen({ navigation }) {
         return;
       }
 
+      // Hiqen apartamentet qe kane booking aktiv.
       const availableApartments = filterAvailableApartments(data, bookedApartmentIds);
       let results = availableApartments;
 
@@ -161,6 +168,7 @@ export default function SearchScreen({ navigation }) {
         results = results.filter(hasMapLocation);
       }
 
+      // Krijohen preferenca nga filtrat per renditjen "smart".
       const preferences = buildSearchPreferences({
         searchText,
         selectedCity,
@@ -189,6 +197,7 @@ export default function SearchScreen({ navigation }) {
         return;
       }
 
+      // Nese nuk ka rezultat te sakte, shfaqen apartamente te ngjashme.
       setResultMode('similar');
       setApartments(rankApartmentsSmartly(availableApartments, preferences).slice(0, 8));
     } finally {
@@ -204,6 +213,7 @@ export default function SearchScreen({ navigation }) {
     executeSearch();
   }, [executeSearch]);
 
+  // Renderon nje karte apartamenti ne listen e rezultateve.
   const renderApartment = ({ item }) => {
     const primaryImageUrl = getPrimaryImageUrl(item.image_url);
 
@@ -242,6 +252,7 @@ export default function SearchScreen({ navigation }) {
     );
   };
 
+  // Pastron filtrat dhe rikthen listen ne gjendje te pergjithshme.
   const clearFilters = () => {
     setSearchText('');
     setSelectedCity('');
@@ -253,6 +264,7 @@ export default function SearchScreen({ navigation }) {
     setMapOnly(false);
   };
 
+  // Aktivizon ose caktivizon nje amenity ne filtrat e kerkimit.
   const toggleAmenity = (amenityKey) => {
     setSelectedAmenities((current) =>
       current.includes(amenityKey)
@@ -261,6 +273,7 @@ export default function SearchScreen({ navigation }) {
     );
   };
 
+  // Shfaq apartamentet me lokacion si karta te ngjashme me pin-a harte.
   const renderMapPin = ({ item }) => (
     <TouchableOpacity
       style={styles.mapPinCard}
@@ -285,6 +298,7 @@ export default function SearchScreen({ navigation }) {
     </TouchableOpacity>
   );
 
+  // Header-i i rezultateve tregon statusin e kerkimit dhe ndrron list/map.
   const renderResultsHeader = () => {
     const showMapHeader = viewMode === 'map';
     const showSimilarHeader = resultMode === 'similar' && apartments.length > 0;
@@ -315,6 +329,7 @@ export default function SearchScreen({ navigation }) {
     );
   };
 
+  // Modal-i i filtrave permban fushat e qytetit, cmimit, dhomave dhe amenities.
   const renderFilters = () => (
     <ScrollView
       style={styles.filterPanel}
@@ -525,6 +540,7 @@ export default function SearchScreen({ navigation }) {
   );
 }
 
+// Stilet percaktojne layout-in e kerkimit, kartat, modalin dhe pamjen map.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

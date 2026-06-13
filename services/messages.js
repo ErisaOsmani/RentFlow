@@ -1,7 +1,8 @@
 import { supabase } from './supabase';
-import { createNotification, isMissingSchemaError } from './sprintOne';
+import { createNotification, isMissingSchemaError } from './bookings';
 import { USER_PROFILE_SELECT_FULL } from '../utils/marketplace';
 
+// Merr profilin e user-it duke provuar select-e qe pershtaten me skema te ndryshme.
 export const loadUserProfile = async (userId) => {
   if (!userId) {
     return { profile: null, error: null };
@@ -24,6 +25,7 @@ export const loadUserProfile = async (userId) => {
   return { profile: null, error: null };
 };
 
+// Perditeson te dhenat e profilit dhe e kthen statusin ne pending verification.
 export const updateUserProfile = async ({ userId, firstName, lastName, phone }) => {
   const payloadOptions = [
     {
@@ -56,6 +58,7 @@ export const updateUserProfile = async ({ userId, firstName, lastName, phone }) 
   return { error: { message: 'The profile was not saved. Check the users table columns.' } };
 };
 
+// Admini e perdor per te verifikuar ose refuzuar nje profil.
 export const setProfileVerification = async ({ userId, verified }) => {
   const payloadOptions = [
     {
@@ -79,9 +82,10 @@ export const setProfileVerification = async ({ userId, verified }) => {
     return { error };
   }
 
-  return { error: { message: 'Run supabase_sprint2.sql for verified profiles.' } };
+  return { error: { message: 'Run supabase_marketplace_features.sql for verified profiles.' } };
 };
 
+// Gjen biseden ekzistuese per apartamentin ose krijon nje te re.
 export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }) => {
   if (!apartmentId || !ownerId || !clientId) {
     return { conversation: null, error: { message: 'Missing chat data.' } };
@@ -98,7 +102,7 @@ export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }
   if (isMissingSchemaError(existingError)) {
     return {
       conversation: null,
-      error: { message: 'Run supabase_sprint2.sql to enable chat.' },
+      error: { message: 'Run supabase_marketplace_features.sql to enable chat.' },
       unavailable: true,
     };
   }
@@ -124,7 +128,7 @@ export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }
   if (isMissingSchemaError(error)) {
     return {
       conversation: null,
-      error: { message: 'Run supabase_sprint2.sql to enable chat.' },
+      error: { message: 'Run supabase_marketplace_features.sql to enable chat.' },
       unavailable: true,
     };
   }
@@ -132,6 +136,7 @@ export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }
   return { conversation: data || null, error };
 };
 
+// Ngarkon mesazhet e nje bisede ne rend kronologjik.
 export const loadConversationMessages = async (conversationId) => {
   const { data, error } = await supabase
     .from('messages')
@@ -146,6 +151,7 @@ export const loadConversationMessages = async (conversationId) => {
   return { messages: data || [], error, unavailable: false };
 };
 
+// Dergon njoftim te personi tjeter kur vjen mesazh i ri.
 const notifyMessageRecipient = async ({ conversationId, senderId, body }) => {
   const { data: conversation, error } = await supabase
     .from('conversations')
@@ -176,6 +182,7 @@ const notifyMessageRecipient = async ({ conversationId, senderId, body }) => {
   });
 };
 
+// Ruaj mesazhin, perditeson conversation.updated_at dhe njofton marresin.
 export const sendConversationMessage = async ({ conversationId, senderId, body }) => {
   const normalizedBody = body.trim();
 
@@ -196,7 +203,7 @@ export const sendConversationMessage = async ({ conversationId, senderId, body }
     .maybeSingle();
 
   if (isMissingSchemaError(error)) {
-    return { message: null, error: { message: 'Run supabase_sprint2.sql for messages.' } };
+    return { message: null, error: { message: 'Run supabase_marketplace_features.sql for messages.' } };
   }
 
   if (error?.code === '42501' || error?.message?.toLowerCase().includes('row-level security')) {
@@ -236,6 +243,7 @@ export const sendConversationMessage = async ({ conversationId, senderId, body }
   return { message: data || null, error };
 };
 
+// Merr te gjitha bisedat ku user-i eshte pronar ose klient.
 export const loadInboxConversations = async (userId) => {
   const { data, error } = await supabase
     .from('conversations')

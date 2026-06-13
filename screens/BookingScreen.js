@@ -20,19 +20,23 @@ import {
   createNotification,
   getBlockingBookings,
   getCurrentUser,
-} from '../services/sprintOne';
+} from '../services/bookings';
 
+// BookingScreen merret me zgjedhjen e datave dhe krijimin e kerkeses per rezervim.
 export default function BookingScreen({ route, navigation }) {
   const { apartment } = route.params;
 
+  // State-et ruajne datat e zgjedhura, loading dhe datat qe nuk lejohen.
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [loading, setLoading] = useState(false);
   const [unavailableRanges, setUnavailableRanges] = useState([]);
 
+  // Cmimi final llogaritet nga periudha e zgjedhur.
   const monthCount = getBillingMonthCount(start, end);
   const totalPrice = getMonthlyBookingTotal(apartment.price, start, end);
 
+  // Merr booking-et ekzistuese qe kalendari te bllokoje datat e zena.
   const loadUnavailableRanges = useCallback(async () => {
     if (!apartment?.id) {
       setUnavailableRanges([]);
@@ -46,6 +50,7 @@ export default function BookingScreen({ route, navigation }) {
       .order('start_date', { ascending: false });
 
     if (error?.code === '42703') {
+      // Fallback perdoret kur kolona status nuk ekziston ende ne databaze.
       const fallback = await supabase
         .from('bookings')
         .select('id, start_date, end_date')
@@ -75,6 +80,7 @@ export default function BookingScreen({ route, navigation }) {
     loadUnavailableRanges();
   }, [loadUnavailableRanges]);
 
+  // Validon datat, kontrollon konfliktet dhe krijon booking + njoftim per pronarin.
   const book = async () => {
     const normalizedStart = start.trim();
     const normalizedEnd = end.trim();
@@ -99,6 +105,7 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
+      // Sigurohet owner_id edhe nese nuk ka ardhur ne objektin e apartamentit.
       let ownerId = apartment.owner_id;
 
       if (!ownerId && apartment.id) {
@@ -121,6 +128,7 @@ export default function BookingScreen({ route, navigation }) {
         return;
       }
 
+      // Te dhenat e klientit ruhen te booking-u qe pronari t'i shoh me lehte.
       let guestProfile = null;
       const guestProfileQueries = [
         'first_name, last_name, phone',
@@ -148,6 +156,7 @@ export default function BookingScreen({ route, navigation }) {
         break;
       }
 
+      // Kontrolli final parandalon dy rezervime ne te njejten periudhe.
       const { bookings: conflictingBookings, error: conflictError } = await getBlockingBookings({
         apartmentId: apartment.id,
         startDate: normalizedStart,
@@ -261,6 +270,7 @@ export default function BookingScreen({ route, navigation }) {
   );
 }
 
+// Stilet mbulojne formen e rezervimit, kalendarin, permbledhjen dhe butonin final.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

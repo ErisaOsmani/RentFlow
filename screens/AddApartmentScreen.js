@@ -18,14 +18,18 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../services/supabase';
 import { parseImageUrls } from '../utils/apartmentImages';
 import { AMENITIES, CURRENCIES, formatPrice, normalizeCurrency } from '../utils/marketplace';
-import { generateApartmentDescription, getListingQualityReport } from '../services/sprintFour';
+import { generateApartmentDescription, getListingQualityReport } from '../services/recommendations';
 
+// Numri maksimal i fotove qe lejohen per nje apartament.
 const MAX_IMAGES = 10;
 
+// AddApartmentScreen perdoret nga pronari/admini per te shtuar ose perditesuar nje apartament.
 export default function AddApartmentScreen({ navigation, route }) {
+  // Kur vjen apartment ne route params, forma punon ne mode editimi.
   const editingApartment = route?.params?.apartment;
   const storageBucket = process.env.EXPO_PUBLIC_SUPABASE_BUCKET || 'apartment-images';
 
+  // State-et ruajne fushat e formes, fotot, amenities dhe gjendjet e UI-se.
   const [title, setTitle] = useState(editingApartment?.title || '');
   const [city, setCity] = useState(editingApartment?.city || '');
   const [neighborhood, setNeighborhood] = useState(editingApartment?.neighborhood || '');
@@ -74,6 +78,7 @@ export default function AddApartmentScreen({ navigation, route }) {
   );
   const [loading, setLoading] = useState(false);
 
+  // Draft-i perdoret per te llogaritur quality report para se apartamenti te ruhet.
   const draftApartment = useMemo(() => {
     const draft = {
       title,
@@ -94,11 +99,13 @@ export default function AddApartmentScreen({ navigation, route }) {
     return draft;
   }, [address, amenities, city, currency, description, imageUrls, neighborhood, price, rooms, title]);
 
+  // Quality report ndihmon pronarin te kuptoje cfare mungon ne listing.
   const qualityReport = useMemo(() => getListingQualityReport(draftApartment), [draftApartment]);
   const selectedCurrency = useMemo(
     () => CURRENCIES.find((item) => item.code === normalizeCurrency(currency)) || CURRENCIES.find((item) => item.code === 'USD'),
     [currency]
   );
+  // Filtron listen e monedhave kur user-i kerkon ne currency picker.
   const filteredCurrencies = useMemo(() => {
     const query = currencySearch.trim().toLowerCase();
 
@@ -111,6 +118,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     );
   }, [currencySearch]);
 
+  // Kur editohet apartamenti, merr kontaktin e pronarit nga profili.
   const loadOwnerContact = useCallback(async () => {
     if (!editingApartment?.owner_id) {
       return;
@@ -150,6 +158,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     loadOwnerContact();
   }, [loadOwnerContact]);
 
+  // Perditeson emrin/telefonin e pronarit ne tabelen users nese forma i ka plotesuar.
   const updateOwnerContact = async (ownerId) => {
     const normalizedOwnerName = ownerName.trim();
     const normalizedOwnerPhone = ownerPhone.trim();
@@ -166,6 +175,7 @@ export default function AddApartmentScreen({ navigation, route }) {
         }
       : {};
     const phonePayload = normalizedOwnerPhone ? { phone: normalizedOwnerPhone } : {};
+    // Payload-e alternative per skema te ndryshme te tabeles users.
     const ownerPayloadOptions = [
       {
         ...namePayload,
@@ -213,6 +223,7 @@ export default function AddApartmentScreen({ navigation, route }) {
       : null;
   };
 
+  // Krijon objektin qe dergohet ne Supabase per insert/update te apartamentit.
   const buildApartmentPayload = (
     ownerId,
     uploadedImageUrls,
@@ -256,6 +267,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     return payload;
   };
 
+  // Ndryshon true/false per nje amenity.
   const toggleAmenity = (amenityKey) => {
     setAmenities((current) => ({
       ...current,
@@ -263,17 +275,20 @@ export default function AddApartmentScreen({ navigation, route }) {
     }));
   };
 
+  // Gjeneron nje pershkrim automatik nga te dhenat qe jane futur ne forme.
   const handleGenerateDescription = () => {
     const generatedDescription = generateApartmentDescription(draftApartment);
     setDescription(generatedDescription);
   };
 
+  // Zgjedh monedhen dhe mbyll modalin e currency picker.
   const selectCurrency = (item) => {
     setCurrency(item.code);
     setCurrencySearch('');
     setShowCurrencyPicker(false);
   };
 
+  // Hap galerine e telefonit dhe ruan fotot e zgjedhura ne state.
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -304,11 +319,13 @@ export default function AddApartmentScreen({ navigation, route }) {
     setImageUrls(selectedAssets.map((asset) => asset.uri));
   };
 
+  // Heq nje foto nga preview dhe nga lista qe do ngarkohet.
   const removeImage = (indexToRemove) => {
     setImageUrls((current) => current.filter((_, index) => index !== indexToRemove));
     setPickedImages((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
+  // Ngarkon fotot ne Supabase Storage dhe kthen URL-te publike.
   const uploadPickedImages = async (userId) => {
     if (!pickedImages.length) {
       return imageUrls.filter(Boolean);
@@ -344,6 +361,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     return uploadedUrls;
   };
 
+  // Validon formen, ngarkon fotot dhe ben insert/update ne tabelen apartments.
   const handleSaveApartment = async () => {
     if (!title || !city || !description || !price || !rooms) {
       Alert.alert('Error', 'Fill in all fields.');
@@ -380,6 +398,7 @@ export default function AddApartmentScreen({ navigation, route }) {
         return;
       }
 
+      // Admini lejohet te editoje apartamente te pronareve te tjere.
       let isAdmin = false;
 
       if (editingApartment) {
@@ -420,6 +439,7 @@ export default function AddApartmentScreen({ navigation, route }) {
           .insert([buildApartmentPayload(ownerId, uploadedImageUrls, parsedPrice, parsedRooms)]);
       }
 
+      // Nese mungon kolona currency, ruhet apartamenti pa ate fushe.
       if (saveResult.error?.code === '42703') {
         if (editingApartment) {
           let updateQuery = supabase
@@ -439,6 +459,7 @@ export default function AddApartmentScreen({ navigation, route }) {
         }
       }
 
+      // Nese mungojne fushat marketplace/contact, provohet nje payload minimal.
       if (saveResult.error?.code === '42703') {
         savedOwnerContactOnApartment = false;
 
@@ -484,6 +505,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     }
   };
 
+  // UI kryesor i formes: tekstet, fotot, amenities, currency picker dhe butoni save.
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -744,6 +766,7 @@ export default function AddApartmentScreen({ navigation, route }) {
   );
 }
 
+// Stilet per formen e apartamentit, preview fotot, picker-at dhe quality report.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

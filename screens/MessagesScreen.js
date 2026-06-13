@@ -11,15 +11,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
-import { getCurrentUser, markNotificationsReadByType } from '../services/sprintOne';
-import { loadInboxConversations } from '../services/sprintTwo';
+import { getCurrentUser, markNotificationsReadByType } from '../services/bookings';
+import { loadInboxConversations } from '../services/messages';
 import { APARTMENT_SELECT_FULL, USER_PROFILE_SELECT_FULL, getOwnerDisplayName } from '../utils/marketplace';
 
+// MessagesScreen shfaq inbox-in me bisedat aktive te user-it.
 export default function MessagesScreen({ navigation }) {
+  // State-et ruajne bisedat, user-in aktual dhe gjendjen loading.
   const [conversations, setConversations] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Merr bisedat, i shenon njoftimet si te lexuara dhe bashkon apartamentet/user-at.
   const loadMessages = useCallback(async () => {
     try {
       setLoading(true);
@@ -45,6 +48,7 @@ export default function MessagesScreen({ navigation }) {
         return;
       }
 
+      // ID-te perdoren per te marre te dhenat shtese me pak query.
       const apartmentIds = Array.from(new Set(loadedConversations.map((item) => item.apartment_id).filter(Boolean)));
       const userIds = Array.from(
         new Set(
@@ -82,6 +86,7 @@ export default function MessagesScreen({ navigation }) {
         break;
       }
 
+      // Map-at e bejne render-in me te thjeshte dhe me te shpejte.
       const apartmentMap = apartments.reduce((acc, apartment) => {
         acc[apartment.id] = apartment;
         return acc;
@@ -110,6 +115,7 @@ export default function MessagesScreen({ navigation }) {
     }, [loadMessages])
   );
 
+  // Renderon nje karte bisede dhe hap ChatScreen kur shtypet.
   const renderConversation = ({ item }) => {
     const otherProfile = item.owner_id === currentUserId ? item.client : item.owner;
 
@@ -164,6 +170,7 @@ export default function MessagesScreen({ navigation }) {
   );
 }
 
+// Stilet per inbox-in, kartat e bisedave dhe gjendjen bosh.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -13,13 +13,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
-import { getCurrentUser, loadFavoriteApartmentIds } from '../services/sprintOne';
+import { getCurrentUser, loadFavoriteApartmentIds } from '../services/bookings';
 import { APARTMENT_SELECT_FULL, formatPrice, getAmenityLabels } from '../utils/marketplace';
 
+// FavoritesScreen shfaq apartamentet qe user-i i ka ruajtur si favorite.
 export default function FavoritesScreen({ navigation }) {
+  // State-et ruajne listen e favoriteve dhe gjendjen loading.
   const [apartments, setApartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Merr ID-te favorite dhe pastaj ngarkon te dhenat e apartamenteve.
   const loadFavorites = useCallback(async () => {
     try {
       setLoading(true);
@@ -43,6 +46,7 @@ export default function FavoritesScreen({ navigation }) {
         return;
       }
 
+      // Select-e alternative per skema te ndryshme te tabeles apartments.
       const selectOptions = APARTMENT_SELECT_FULL;
 
       for (const selectFields of selectOptions) {
@@ -74,6 +78,7 @@ export default function FavoritesScreen({ navigation }) {
     }, [loadFavorites])
   );
 
+  // Renderon nje karte apartamenti qe hap faqen e detajeve.
   const renderApartment = ({ item }) => {
     const imageUrl = getPrimaryImageUrl(item.image_url);
 
@@ -129,6 +134,7 @@ export default function FavoritesScreen({ navigation }) {
   );
 }
 
+// Stilet per listen e favoriteve, kartat dhe gjendjen bosh.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -17,7 +17,7 @@ import { logoutUser } from '../services/auth';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
 import { APARTMENT_SELECT_FULL, USER_PROFILE_SELECT_FULL, formatPrice, getProfileVerificationLabel } from '../utils/marketplace';
-import { setProfileVerification } from '../services/sprintTwo';
+import { setProfileVerification } from '../services/messages';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -28,7 +28,9 @@ const TABS = [
 
 const ROLES = ['client', 'owner', 'admin'];
 
+// AdminHomeScreen eshte panel kontrolli per apartamente, bookings dhe perdorues.
 export default function AdminHomeScreen({ navigation }) {
+  // State-et ruajne tab-in aktiv, te dhenat e panelit, search dhe gjendjet loading/logout.
   const [activeTab, setActiveTab] = useState('overview');
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -39,6 +41,7 @@ export default function AdminHomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Ngarkon te gjitha te dhenat qe i duhen adminit dhe verifikon rolin admin.
   const loadAdminData = useCallback(async () => {
     try {
       setLoading(true);
@@ -54,6 +57,7 @@ export default function AdminHomeScreen({ navigation }) {
 
       setCurrentAdminId(userId);
 
+      // Select-e alternative qe paneli te punoje edhe kur disa kolona mungojne.
       const userSelectOptions = USER_PROFILE_SELECT_FULL;
 
       let usersData = [];
@@ -77,6 +81,7 @@ export default function AdminHomeScreen({ navigation }) {
         break;
       }
 
+      // Vetem user-at me role admin lejohen te qendrojne ne panel.
       const profile = usersData.find((user) => user.id === userId);
 
       if (profile?.role !== 'admin') {
@@ -110,6 +115,7 @@ export default function AdminHomeScreen({ navigation }) {
         return;
       }
 
+      // Booking-et merren me disa forma select-i per kompatibilitet me skemen.
       const bookingSelectOptions = [
         'id, start_date, end_date, status, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
         'id, start_date, end_date, status, user_id, owner_id, apartment_id',
@@ -138,6 +144,7 @@ export default function AdminHomeScreen({ navigation }) {
         break;
       }
 
+      // Map-at lidhen booking-et dhe apartamentet me user-at pa bere query shtese ne render.
       const userMap = (usersData || []).reduce((acc, user) => {
         acc[user.id] = user;
         return acc;
@@ -176,6 +183,7 @@ export default function AdminHomeScreen({ navigation }) {
     }, [loadAdminData])
   );
 
+  // Kthen emrin e plote, email-in ose fallback per shfaqje ne UI.
   const getUserName = (user, fallback = 'Unknown user') => {
     if (!user) {
       return fallback;
@@ -194,6 +202,7 @@ export default function AdminHomeScreen({ navigation }) {
     return bookingName || getUserName(booking.guest, 'Unknown guest');
   };
 
+  // Statistika per qytete: sa apartamente dhe booking-e ka secili qytet.
   const cityStats = useMemo(() => {
     const cityMap = apartments.reduce((acc, apartment) => {
       const city = apartment.city || 'No city';
@@ -232,6 +241,7 @@ export default function AdminHomeScreen({ navigation }) {
     return Object.values(cityMap).sort((first, second) => second.bookings - first.bookings);
   }, [apartments, bookings]);
 
+  // Statistika te pergjithshme per kartat e overview.
   const stats = useMemo(() => {
     const owners = users.filter((user) => user.role === 'owner').length;
     const clients = users.filter((user) => user.role === 'client').length;
@@ -241,6 +251,7 @@ export default function AdminHomeScreen({ navigation }) {
     return { owners, clients, admins, monthlyRent };
   }, [apartments, users]);
 
+  // Filtron te dhenat sipas tab-it aktiv dhe tekstit te kerkimit.
   const filteredData = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const matches = (values) => values.filter(Boolean).join(' ').toLowerCase().includes(needle);
@@ -274,15 +285,18 @@ export default function AdminHomeScreen({ navigation }) {
     );
   }, [activeTab, apartments, bookings, cityStats, search, users]);
 
+  // Hap/mbyll detajet e nje karte ne liste.
   const toggleExpanded = (id) => {
     setExpandedId((current) => (current === id ? null : id));
   };
 
+  // Nderrimi i tab-it pastron kartat e hapura.
   const switchTab = (tab) => {
     setActiveTab(tab);
     setExpandedId(null);
   };
 
+  // Mbyll sesionin e adminit dhe kthehet te Login.
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -308,6 +322,7 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
+  // Fshin apartamentin nga Supabase pas konfirmimit.
   const handleDeleteApartment = (apartmentId) => {
     Alert.alert('Delete', 'Are you sure you want to delete this apartment?', [
       { text: 'Cancel', style: 'cancel' },
@@ -328,6 +343,7 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
+  // Fshin nje booking nga paneli i adminit.
   const handleDeleteBooking = (bookingId) => {
     Alert.alert('Delete', 'Are you sure you want to delete this booking?', [
       { text: 'Cancel', style: 'cancel' },
@@ -348,6 +364,7 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
+  // Ndryshon rolin e user-it, por mbron adminin aktual nga heqja e rolit te vet.
   const handleChangeRole = (user, role) => {
     if (user.id === currentAdminId && role !== 'admin') {
       Alert.alert('Error', 'You cannot remove the admin role from your own account.');
@@ -372,6 +389,7 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
+  // Verifikon ose heq verifikimin e profilit te user-it.
   const handleVerification = async (user, verified) => {
     const { error } = await setProfileVerification({ userId: user.id, verified });
 
@@ -383,6 +401,7 @@ export default function AdminHomeScreen({ navigation }) {
     loadAdminData();
   };
 
+  // Renderon statistikat per nje qytet ne tab-in Overview.
   const renderOverviewItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -419,6 +438,7 @@ export default function AdminHomeScreen({ navigation }) {
     </TouchableOpacity>
   );
 
+  // Renderon nje apartament ne panel me veprime Open/Edit/Delete.
   const renderApartment = ({ item }) => {
     const imageUrl = getPrimaryImageUrl(item.image_url);
     const isExpanded = expandedId === `apartment-${item.id}`;
@@ -472,6 +492,7 @@ export default function AdminHomeScreen({ navigation }) {
     );
   };
 
+  // Renderon nje booking dhe shfaq detaje per klientin/pronarin.
   const renderBooking = ({ item }) => {
     const guestPhone = item.guest_phone || item.guest?.phone;
     const isExpanded = expandedId === `booking-${item.id}`;
@@ -517,6 +538,7 @@ export default function AdminHomeScreen({ navigation }) {
     );
   };
 
+  // Renderon nje user me role, verifikim dhe statistika.
   const renderUser = ({ item }) => {
     const isExpanded = expandedId === `user-${item.id}`;
 
@@ -584,6 +606,7 @@ export default function AdminHomeScreen({ navigation }) {
     );
   };
 
+  // Zgjedh renderer-in e duhur sipas tab-it aktiv.
   const renderItem = (props) => {
     if (activeTab === 'overview') {
       return renderOverviewItem(props);
@@ -600,6 +623,7 @@ export default function AdminHomeScreen({ navigation }) {
     return renderUser(props);
   };
 
+  // Header-i i admin panel mban statistikat, tab-et dhe search input.
   const renderHeader = () => (
     <>
       <View style={styles.hero}>
@@ -703,6 +727,7 @@ export default function AdminHomeScreen({ navigation }) {
   );
 }
 
+// Stilet per admin panel: tabs, statistika, karta dhe veprime administrative.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -14,13 +14,16 @@ import {
   getCurrentUser,
   loadNotifications,
   markNotificationRead,
-} from '../services/sprintOne';
+} from '../services/bookings';
 
+// NotificationsScreen shfaq njoftimet e palexuara per user-in aktual.
 export default function NotificationsScreen({ navigation }) {
+  // State-et ruajne njoftimet, loading dhe rastin kur tabela mungon ne databaze.
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
 
+  // Merr njoftimet nga Supabase dhe mban vetem ato qe nuk jane lexuar.
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -52,6 +55,7 @@ export default function NotificationsScreen({ navigation }) {
     }, [loadData])
   );
 
+  // Kur hapet njoftimi, shenohet si i lexuar dhe navigon sipas tipit.
   const handleOpen = async (item) => {
     if (!item.read_at) {
       await markNotificationRead(item.id);
@@ -68,6 +72,7 @@ export default function NotificationsScreen({ navigation }) {
     }
   };
 
+  // Renderon nje karte njoftimi.
   const renderNotification = ({ item }) => (
     <TouchableOpacity
       style={[styles.card, !item.read_at && styles.cardUnread]}
@@ -94,7 +99,7 @@ export default function NotificationsScreen({ navigation }) {
       ) : unavailable ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Notifications not configured</Text>
-          <Text style={styles.emptyText}>Run supabase_sprint1.sql to enable notifications.</Text>
+          <Text style={styles.emptyText}>Run supabase_core_features.sql to enable notifications.</Text>
         </View>
       ) : notifications.length ? (
         <FlatList
@@ -113,6 +118,7 @@ export default function NotificationsScreen({ navigation }) {
   );
 }
 
+// Stilet per listen e njoftimeve dhe gjendjet bosh.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,3 +1,4 @@
+// Llogarit sa muaj duhet faturuar per periudhen e zgjedhur.
 export const getBillingMonthCount = (startDateValue, endDateValue) => {
   const start = parseDateKey(startDateValue);
   const end = parseDateKey(endDateValue);
@@ -15,12 +16,14 @@ export const getBillingMonthCount = (startDateValue, endDateValue) => {
   return wholeMonths + (hasExtraDays ? 1 : 0);
 };
 
+// Shumezon muajt e faturimit me cmimin mujor.
 export const getMonthlyBookingTotal = (monthlyPrice, startDateValue, endDateValue) => {
   const monthCount = getBillingMonthCount(startDateValue, endDateValue);
 
   return monthCount * Number(monthlyPrice || 0);
 };
 
+// Kthen string YYYY-MM-DD ne objekt Date.
 const parseDateKey = (dateKey) => {
   if (!dateKey) {
     return null;
@@ -37,6 +40,7 @@ const parseDateKey = (dateKey) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+// Shton muaj ne date duke ruajtur sa me mire diten e muajit.
 const addCalendarMonths = (date, monthsToAdd) => {
   const year = date.getFullYear();
   const month = date.getMonth() + monthsToAdd;

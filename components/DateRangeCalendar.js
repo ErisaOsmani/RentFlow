@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
+// Emrat e diteve dhe muajve perdoren per header-in e kalendarit.
 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthNames = [
   'January',
@@ -17,6 +18,7 @@ const monthNames = [
   'December',
 ];
 
+// Kthen Date ne format YYYY-MM-DD qe te krahasohen datat si string.
 const toDateKey = (date) => {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -25,6 +27,7 @@ const toDateKey = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Kthen YYYY-MM-DD ne Date ose null nese data nuk eshte valide.
 const parseDateKey = (dateKey) => {
   if (!dateKey) {
     return null;
@@ -36,6 +39,7 @@ const parseDateKey = (dateKey) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+// Nderton listen e diteve te muajit, duke shtuar qeliza bosh para dites se pare.
 const getMonthDays = (monthDate) => {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -55,12 +59,14 @@ const getMonthDays = (monthDate) => {
   return days;
 };
 
+// DateRangeCalendar lejon zgjedhjen e check-in/check-out pa prekur datat e zena.
 export default function DateRangeCalendar({ startDate, endDate, onChange, unavailableRanges = [] }) {
   const initialMonth = parseDateKey(startDate) || new Date();
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
   );
 
+  // Vlerat e llogaritura perdoren per render dhe per bllokim datash.
   const todayKey = toDateKey(new Date());
   const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth]);
   const bookedRanges = useMemo(
@@ -71,24 +77,29 @@ export default function DateRangeCalendar({ startDate, endDate, onChange, unavai
     [unavailableRanges]
   );
 
+  // Kontrollon nese nje date bie brenda nje booking-u ekzistues.
   const isBookedDate = (dateKey) =>
     bookedRanges.some((range) => dateKey >= range.start && dateKey < range.end);
 
+  // Kontrollon nese intervali i zgjedhur kalon mbi nje booking ekzistues.
   const rangeHasBookedDate = (rangeStart, rangeEnd) =>
     bookedRanges.some((range) => rangeStart < range.end && rangeEnd > range.start);
 
+  // Navigon nje muaj mbrapa.
   const goToPreviousMonth = () => {
     setVisibleMonth(
       (currentMonth) => new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
     );
   };
 
+  // Navigon nje muaj perpara.
   const goToNextMonth = () => {
     setVisibleMonth(
       (currentMonth) => new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
     );
   };
 
+  // Menaxhon zgjedhjen e dates se pare dhe te dyte te periudhes.
   const selectDate = (date) => {
     const nextDate = toDateKey(date);
 
@@ -114,6 +125,7 @@ export default function DateRangeCalendar({ startDate, endDate, onChange, unavai
     onChange(startDate, nextDate);
   };
 
+  // UI i kalendarit: datat e zgjedhura, navigimi i muajve dhe grid-i i diteve.
   return (
     <View style={styles.calendar}>
       <View style={styles.selectedRow}>
@@ -195,6 +207,7 @@ export default function DateRangeCalendar({ startDate, endDate, onChange, unavai
   );
 }
 
+// Stilet e kalendarit per qeliza normale, te zgjedhura, te zena dhe te bllokuara.
 const styles = StyleSheet.create({
   calendar: {
     backgroundColor: '#F8FAFC',

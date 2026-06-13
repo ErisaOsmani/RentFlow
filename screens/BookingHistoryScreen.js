@@ -15,13 +15,16 @@ import { supabase } from '../services/supabase';
 import { getPrimaryImageUrl } from '../utils/apartmentImages';
 import { formatPrice } from '../utils/marketplace';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
-import { createNotification, getCurrentUser, updateBookingStatus } from '../services/sprintOne';
+import { createNotification, getCurrentUser, updateBookingStatus } from '../services/bookings';
 
+// Ky screen shfaq historine e rezervimeve per klientin.
 export default function BookingHistoryScreen({ navigation }) {
+  // State-et ruajne booking-et e user-it dhe ID-ne e tij per anulime.
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
 
+  // Ngarkon booking-et e klientit, pastaj lidh apartamentet dhe pronaret perkates.
   const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
@@ -35,6 +38,7 @@ export default function BookingHistoryScreen({ navigation }) {
 
       setCurrentUserId(user.id);
 
+      // Select-e alternative per te punuar edhe nese databaza ka skeme me pak kolona.
       const bookingSelectOptions = [
         'id, start_date, end_date, status, owner_id, apartment_id',
         'id, start_date, end_date, owner_id, apartment_id',
@@ -72,6 +76,7 @@ export default function BookingHistoryScreen({ navigation }) {
         return;
       }
 
+      // Merr te dhenat e apartamenteve qe i perkasin booking-eve.
       const apartmentSelectOptions = [
         'id, owner_id, owner_name, owner_phone, title, city, price, currency, image_url',
         'id, owner_id, owner_name, owner_phone, title, city, price, image_url',
@@ -107,6 +112,7 @@ export default function BookingHistoryScreen({ navigation }) {
         return acc;
       }, {});
 
+      // Merr profilin e pronareve per kontakt/WhatsApp.
       const ownerIds = [...new Set((apartments || []).map((apartment) => apartment.owner_id).filter(Boolean))];
       let ownerMap = {};
 
@@ -158,6 +164,7 @@ export default function BookingHistoryScreen({ navigation }) {
     }, [loadBookings])
   );
 
+  // Renderon nje karte booking-u me status, data dhe kontaktin e pronarit.
   const renderBooking = ({ item }) => {
     const imageUrl = getPrimaryImageUrl(item.apartment?.image_url);
     const ownerPhone = item.apartment?.owner_phone || item.owner?.phone;
@@ -204,6 +211,7 @@ export default function BookingHistoryScreen({ navigation }) {
     );
   };
 
+  // Anulon booking-un dhe dergon njoftim te pronari.
   const handleCancelBooking = (booking) => {
     Alert.alert('Cancel booking', 'Are you sure you want to cancel this booking?', [
       { text: 'No', style: 'cancel' },
@@ -265,6 +273,7 @@ export default function BookingHistoryScreen({ navigation }) {
   );
 }
 
+// Stilet per listen e booking-eve, kartat, statuset dhe butonat e anulimit.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,3 +1,4 @@
+// Kthen image_url ne liste URL-sh, pavaresisht nese vjen si array, JSON string ose URL e vetme.
 export function parseImageUrls(imageValue) {
   if (Array.isArray(imageValue)) {
     return imageValue.filter((item) => typeof item === 'string' && item.trim());
@@ -26,6 +27,7 @@ export function parseImageUrls(imageValue) {
   return [trimmedValue];
 }
 
+// Merr foton e pare qe perdoret si thumbnail/hero image.
 export function getPrimaryImageUrl(imageValue) {
   return parseImageUrls(imageValue)[0] || '';
 }

@@ -1,3 +1,4 @@
+// Lista standarde e amenities qe perdoret ne forma, filtra dhe karta apartamentesh.
 export const AMENITIES = [
   { key: 'has_parking', label: 'Parking' },
   { key: 'has_wifi', label: 'Wi-Fi' },
@@ -8,6 +9,7 @@ export const AMENITIES = [
   { key: 'has_heating', label: 'Heating' },
 ];
 
+// Liste fallback e monedhave kur Intl.supportedValuesOf nuk punon ne pajisje.
 const FALLBACK_CURRENCY_CODES = [
   'AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN',
   'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL',
@@ -27,6 +29,7 @@ const FALLBACK_CURRENCY_CODES = [
   'YER', 'ZAR', 'ZMW', 'ZWL',
 ];
 
+// Lidh kodin e monedhes me shtetin/zonat ku perdoret per search me te mire.
 const CURRENCY_COUNTRIES = {
   AED: 'United Arab Emirates',
   AFN: 'Afghanistan',
@@ -184,6 +187,7 @@ const CURRENCY_COUNTRIES = {
   ZWL: 'Zimbabwe',
 };
 
+// Merr monedhat nga Intl ose perdor fallback kur platforma nuk e mbeshtet.
 const getSupportedCurrencyCodes = () => {
   if (typeof Intl === 'undefined' || typeof Intl.supportedValuesOf !== 'function') {
     return FALLBACK_CURRENCY_CODES;
@@ -196,11 +200,13 @@ const getSupportedCurrencyCodes = () => {
   }
 };
 
+// Formatter per emrin e plote te monedhes.
 const currencyNameFormatter =
   typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
     ? new Intl.DisplayNames(['en'], { type: 'currency' })
     : null;
 
+// Kthen emrin e monedhes, p.sh. USD -> US Dollar.
 const getCurrencyLabel = (code) => {
   try {
     return currencyNameFormatter?.of(code) || code;
@@ -209,6 +215,7 @@ const getCurrencyLabel = (code) => {
   }
 };
 
+// Nxjerr simbolin e monedhes per shfaqje te cmimit.
 const getCurrencySymbolForCode = (code) => {
   try {
     const parts = new Intl.NumberFormat('en-US', {
@@ -224,6 +231,7 @@ const getCurrencySymbolForCode = (code) => {
   }
 };
 
+// Lista finale e monedhave qe perdoret ne currency picker.
 export const CURRENCIES = Array.from(new Set(getSupportedCurrencyCodes()))
   .map((code) => ({
     code,
@@ -233,6 +241,7 @@ export const CURRENCIES = Array.from(new Set(getSupportedCurrencyCodes()))
   }))
   .sort((first, second) => first.label.localeCompare(second.label));
 
+// Select-e alternative per apartments, nga me e plota te me minimalja.
 export const APARTMENT_SELECT_FULL = [
   'id, owner_id, owner_name, owner_phone, title, city, neighborhood, address, latitude, longitude, description, image_url, price, currency, rooms, has_parking, has_wifi, pets_allowed, is_furnished, has_balcony, has_elevator, has_heating',
   'id, owner_id, owner_name, owner_phone, title, city, address, latitude, longitude, description, image_url, price, currency, rooms, has_parking, has_wifi, pets_allowed, is_furnished, has_balcony, has_elevator, has_heating',
@@ -244,6 +253,7 @@ export const APARTMENT_SELECT_FULL = [
   'id, owner_id, title, city, description, image_url, price, rooms',
 ];
 
+// Select-e alternative per profilin e user-it.
 export const USER_PROFILE_SELECT_FULL = [
   'id, email, first_name, last_name, phone, role, verified, verification_status, identity_document_url',
   'id, email, first_name, last_name, phone, role, verified, verification_status',
@@ -253,16 +263,19 @@ export const USER_PROFILE_SELECT_FULL = [
   'id',
 ];
 
+// Kthen label-at e amenities qe jane true per apartamentin.
 export const getAmenityLabels = (apartment) =>
   AMENITIES
     .filter((amenity) => Boolean(apartment?.[amenity.key]))
     .map((amenity) => amenity.label);
 
+// Kthen emrin e pronarit nga profili ose fallback.
 export const getOwnerDisplayName = (profile, fallback = 'Owner') => {
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   return fullName || profile?.email || fallback;
 };
 
+// Normalizon inputin e monedhes ne kod standard, p.sh. $ -> USD.
 export const normalizeCurrency = (currency) => {
   const value = String(currency || '').trim();
   const normalizedValue = value.toUpperCase();
@@ -293,11 +306,13 @@ export const normalizeCurrency = (currency) => {
   return knownCurrency?.code || normalizedValue;
 };
 
+// Kthen simbolin qe duhet shfaqur ne UI per nje monedhe.
 export const getCurrencySymbol = (currency) => {
   const code = normalizeCurrency(currency);
   return CURRENCIES.find((item) => item.code === code)?.symbol || code;
 };
 
+// Formatizon cmimin per karta, detaje dhe booking screens.
 export const formatPrice = (price, currency = 'USD') => {
   if (price === undefined || price === null || price === '') {
     return 'N/A';
@@ -310,6 +325,7 @@ export const formatPrice = (price, currency = 'USD') => {
   return ['$', '\u20AC', '\u00A3'].includes(symbol) ? `${symbol}${displayValue}` : `${displayValue} ${symbol}`;
 };
 
+// Kthen tekstin e statusit te verifikimit te profilit.
 export const getProfileVerificationLabel = (profile) => {
   if (profile?.verified) {
     return 'Verified';
@@ -322,6 +338,7 @@ export const getProfileVerificationLabel = (profile) => {
   return 'Unverified';
 };
 
+// Kontrollon nese apartamenti ka koordinata valide per harte.
 export const hasMapLocation = (apartment) =>
   apartment?.latitude !== undefined &&
   apartment?.latitude !== null &&

@@ -12,13 +12,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { openWhatsAppForPhone } from '../utils/whatsapp';
-import { createNotification, markNotificationsReadByType, updateBookingStatus } from '../services/sprintOne';
+import { createNotification, markNotificationsReadByType, updateBookingStatus } from '../services/bookings';
 
+// Ky screen i lejon pronarit te shoh dhe menaxhoje kerkesat per apartamentet e tij.
 export default function OwnerBookingHistoryScreen({ navigation }) {
+  // State-et ruajne booking-et dhe ID-ne e pronarit aktual.
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [currentOwnerId, setCurrentOwnerId] = useState(null);
 
+  // Ngarkon apartamentet e pronarit dhe booking-et qe lidhen me to.
   const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
@@ -51,6 +54,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return;
       }
 
+      // Select-et alternative mbajne kompatibilitet me versione te ndryshme te databazes.
       const bookingSelectOptions = [
         'id, start_date, end_date, status, user_id, owner_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
         'id, start_date, end_date, status, user_id, apartment_id, guest_first_name, guest_last_name, guest_phone',
@@ -83,6 +87,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return;
       }
 
+      // Nese booking-et nuk gjenden me owner_id, provohet lidhja nepermjet apartment_id.
       const hasOwnerBookings = Array.isArray(bookingsByOwner) && bookingsByOwner.length > 0;
 
       const { data: bookingsByApartment, error: bookingsByApartmentError } = hasOwnerBookings
@@ -105,6 +110,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         return acc;
       }, {});
 
+      // Merr profilin e klientit qe pronari te shoh emrin dhe telefonin.
       const guestIds = [...new Set((bookingsData || []).map((booking) => booking.user_id).filter(Boolean))];
       let guestMap = {};
 
@@ -155,6 +161,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     }, [loadBookings])
   );
 
+  // Ndihmon UI-ne te shfaq nje emer edhe kur mungojne disa fusha.
   const getGuestName = (guest) => {
     if (!guest) {
       return 'Unknown guest';
@@ -177,6 +184,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     return getGuestName(booking.guest);
   };
 
+  // Kthen telefonin e klientit ose tekst fallback kur mungon.
   const getGuestPhone = (guest) => {
     if (!guest?.phone) {
       return 'No phone number';
@@ -193,6 +201,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     return getGuestPhone(booking.guest);
   };
 
+  // Renderon kerkesen e booking-ut me butona accept/reject/cancel.
   const renderBooking = ({ item }) => {
     const guestPhone = getGuestPhoneFromBooking(item);
     const hasGuestPhone = guestPhone !== 'No phone number';
@@ -244,6 +253,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     );
   };
 
+  // Ndryshon statusin e booking-ut dhe njofton klientin.
   const handleStatusChange = (booking, status) => {
     Alert.alert('Change status', `Change this booking to ${status}?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -276,6 +286,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
     ]);
   };
 
+  // UI kryesor: header dhe lista e kerkesave per pronarin.
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -304,6 +315,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
   );
 }
 
+// Stilet per kartat e booking-eve dhe butonat accept/reject/cancel.
 const styles = StyleSheet.create({
   container: {
     flex: 1,

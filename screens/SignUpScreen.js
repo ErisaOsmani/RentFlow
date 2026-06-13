@@ -15,7 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { registerForPushNotifications } from '../services/pushNotifications';
 
+// Ky screen krijon llogari te reja dhe ruan rolin/profilin ne Supabase.
 export default function SignUpScreen({ navigation }) {
+  // State-et ruajne fushat e formes se regjistrimit.
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -25,8 +27,10 @@ export default function SignUpScreen({ navigation }) {
   const [role, setRole] = useState('client');
   const [loading, setLoading] = useState(false);
 
+  // Validim lokal per email para se forma te dergohet ne backend.
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
+  // Regjistron user-in ne Supabase Auth dhe provon disa payload-e per skema te ndryshme DB.
   const signup = async () => {
     const normalizedFirstName = firstName.trim();
     const normalizedLastName = lastName.trim();
@@ -81,6 +85,7 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
+      // Keta payload-e e bejne app-in tolerant nese disa kolona nuk jane shtuar ende ne Supabase.
       const userPayloadOptions = [
         {
           id: user.id,
@@ -253,6 +258,7 @@ export default function SignUpScreen({ navigation }) {
   );
 }
 
+// Stilet mbulojne formen, zgjedhjen e rolit dhe butonat e regjistrimit.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

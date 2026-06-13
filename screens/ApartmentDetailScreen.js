@@ -37,20 +37,24 @@ import {
   loadReviewData,
   submitApartmentReview,
   toggleFavorite,
-} from '../services/sprintOne';
-import { getListingQualityReport } from '../services/sprintFour';
+} from '../services/bookings';
+import { getListingQualityReport } from '../services/recommendations';
 
+// ApartmentDetailScreen shfaq detajet e plota te apartamentit dhe veprimet kryesore.
 export default function ApartmentDetailScreen() {
+  // Navigation/route sjellin apartamentin e zgjedhur nga ekranet e tjera.
   const navigation = useNavigation();
   const route = useRoute();
   const apartment = route.params?.apartment;
   const routeViewerRole = route.params?.viewerRole || null;
 
+  // Imazhet pergatiten per galeri dhe per foton kryesore.
   const imageUrls = useMemo(() => parseImageUrls(apartment?.image_url), [apartment?.image_url]);
   const heroImage = imageUrls[0] || getPrimaryImageUrl(apartment?.image_url);
   const { width } = useWindowDimensions();
   const galleryListRef = useRef(null);
 
+  // State-et mbulojne booking, galeri, favorite, reviews dhe rolin e shikuesit.
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -68,6 +72,7 @@ export default function ApartmentDetailScreen() {
   const [viewerRole, setViewerRole] = useState(routeViewerRole);
   const isAdminView = viewerRole === 'admin';
 
+  // Ngarkon booking-et aktive qe perdoren per kalendarin e datave te bllokuara.
   const loadRecentBookings = useCallback(async () => {
     if (!apartment?.id) {
       return;
@@ -83,6 +88,7 @@ export default function ApartmentDetailScreen() {
         .order('start_date', { ascending: false });
 
       if (error?.code === '42703') {
+        // Fallback per databaza ku kolona status nuk eshte shtuar ende.
         const fallback = await supabase
           .from('bookings')
           .select('id, start_date, end_date')
@@ -112,6 +118,7 @@ export default function ApartmentDetailScreen() {
     }
   }, [apartment?.id]);
 
+  // Merr profilin e pronarit per emer, telefon dhe verifikim.
   const loadOwnerProfile = useCallback(async () => {
     if (!apartment?.owner_id) {
       setOwnerProfile(null);
@@ -151,6 +158,7 @@ export default function ApartmentDetailScreen() {
     loadOwnerProfile();
   }, [loadOwnerProfile]);
 
+  // Kontrollon nese apartamenti eshte ne favoritet e user-it aktual.
   const loadFavoriteState = useCallback(async () => {
     if (!apartment?.id) {
       return;
@@ -167,6 +175,7 @@ export default function ApartmentDetailScreen() {
     setFavorite(favoriteApartmentIds.map(String).includes(String(apartment.id)));
   }, [apartment?.id]);
 
+  // Ngarkon vleresimet dhe mesataren e rating per apartamentin.
   const loadReviews = useCallback(async () => {
     if (!apartment?.id) {
       return;
@@ -196,6 +205,7 @@ export default function ApartmentDetailScreen() {
 
     let isMounted = true;
 
+    // Roli vendos nese ekrani shfaqet si admin apo si klient normal.
     const loadViewerRole = async () => {
       const { user } = await getCurrentUser();
 
@@ -236,6 +246,7 @@ export default function ApartmentDetailScreen() {
     return () => clearTimeout(timeoutId);
   }, [viewerIndex, viewerVisible]);
 
+  // Keto vlera te derivuara perdoren per cmim, pronar, amenities dhe quality report.
   const monthCount = getBillingMonthCount(startDate, endDate);
   const totalPrice = getMonthlyBookingTotal(apartment?.price, startDate, endDate);
   const profileOwnerName = [ownerProfile?.first_name, ownerProfile?.last_name].filter(Boolean).join(' ').trim();
@@ -245,11 +256,13 @@ export default function ApartmentDetailScreen() {
   const ownerVerificationLabel = getProfileVerificationLabel(ownerProfile);
   const qualityReport = getListingQualityReport(apartment);
 
+  // Hap modalin e galerise ne foton qe zgjedh perdoruesi.
   const openImageViewer = (index) => {
     setViewerIndex(index);
     setViewerVisible(true);
   };
 
+  // Sinkronizon indeksin kur perdoruesi ben scroll ne galeri.
   const handleViewerScroll = (event) => {
     if (!width) {
       return;
@@ -259,6 +272,7 @@ export default function ApartmentDetailScreen() {
     setViewerIndex(nextIndex);
   };
 
+  // Krijon booking direkt nga ekrani i detajeve pasi kontrollon datat dhe konfliktet.
   const handleBook = async () => {
     const normalizedStart = startDate.trim();
     const normalizedEnd = endDate.trim();
@@ -283,6 +297,7 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      // Owner ID mund te mungoje ne route params, prandaj merret nga databaza nese duhet.
       let ownerId = apartment.owner_id;
 
       if (!ownerId && apartment.id) {
@@ -305,6 +320,7 @@ export default function ApartmentDetailScreen() {
         return;
       }
 
+      // Profili i klientit ruhet ne booking per ta bere me te lehte per pronarin.
       let guestProfile = null;
       const guestProfileQueries = [
         'first_name, last_name, phone',
@@ -332,6 +348,7 @@ export default function ApartmentDetailScreen() {
         break;
       }
 
+      // Kontrollon nese datat e zgjedhura bien mbi nje rezervim ekzistues.
       const { bookings: conflictingBookings, error: conflictError } = await getBlockingBookings({
         apartmentId: apartment.id,
         startDate: normalizedStart,
@@ -386,6 +403,7 @@ export default function ApartmentDetailScreen() {
     }
   };
 
+  // Shton ose heq apartamentin nga lista e favoriteve te user-it.
   const handleToggleFavorite = async () => {
     const { user } = await getCurrentUser();
 
@@ -406,13 +424,14 @@ export default function ApartmentDetailScreen() {
     }
 
     if (favoriteUnavailable) {
-      Alert.alert('Info', 'Run supabase_sprint1.sql to enable favorites.');
+      Alert.alert('Info', 'Run supabase_core_features.sql to enable favorites.');
       return;
     }
 
     setFavorite(result.isFavorite);
   };
 
+  // Ruaj review/rating per apartamentin dhe rifreskon listen e reviews.
   const handleSubmitReview = async () => {
     const { user } = await getCurrentUser();
 
@@ -436,7 +455,7 @@ export default function ApartmentDetailScreen() {
       }
 
       if (reviewData.unavailable) {
-        Alert.alert('Info', 'Run supabase_sprint1.sql to enable reviews.');
+        Alert.alert('Info', 'Run supabase_core_features.sql to enable reviews.');
         return;
       }
 
@@ -448,6 +467,7 @@ export default function ApartmentDetailScreen() {
     }
   };
 
+  // Hap Google Maps duke perdorur koordinatat ose adresen e apartamentit.
   const openGoogleMaps = async () => {
     const query = hasMapLocation(apartment)
       ? `${apartment.latitude},${apartment.longitude}`
@@ -462,6 +482,7 @@ export default function ApartmentDetailScreen() {
     await Linking.openURL(url);
   };
 
+  // Hap biseden me pronarin per kete apartament.
   const openChat = async () => {
     const { user, error } = await getCurrentUser();
 
@@ -478,6 +499,7 @@ export default function ApartmentDetailScreen() {
     navigation.navigate('Chat', { apartment, clientId: user.id });
   };
 
+  // Fallback nese ekrani hapet pa apartament ne route params.
   if (!apartment) {
     return (
       <SafeAreaView style={styles.emptyContainer}>
@@ -489,6 +511,7 @@ export default function ApartmentDetailScreen() {
     );
   }
 
+  // UI kryesor: galeri, info, booking, kontakt, amenities, reviews dhe modale.
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -779,6 +802,7 @@ export default function ApartmentDetailScreen() {
   );
 }
 
+// Stilet per detajet e apartamentit, galerine, booking form, reviews dhe modale.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
