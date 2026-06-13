@@ -256,14 +256,14 @@ export const createBooking = async (payload) => {
     if (isBookingConflictError(result.error)) {
       return {
         booking: null,
-        error: { message: 'Keto data jane te zena per kete banese. Zgjidh data te tjera.' },
+        error: { message: 'These dates are already booked for this apartment. Choose different dates.' },
       };
     }
 
     return { booking: null, error: result.error };
   }
 
-  return { booking: null, error: { message: 'Rezervimi nuk u ruajt. Kontrollo kolonat e tabeles bookings.' } };
+  return { booking: null, error: { message: 'The booking was not saved. Check the bookings table columns.' } };
 };
 
 export const updateBookingStatus = async ({ bookingId, status, cancelledBy = null }) => {
@@ -290,5 +290,5 @@ export const updateBookingStatus = async ({ bookingId, status, cancelledBy = nul
     return { error };
   }
 
-  return { error: { message: 'Kolona status mungon ne tabelen bookings.' } };
+  return { error: { message: 'The status column is missing from the bookings table.' } };
 };

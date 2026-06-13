@@ -26,7 +26,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       const ownerId = authData?.user?.id;
 
       if (authError || !ownerId) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per te pare rezervimet e apartamenteve.' );
+        Alert.alert('Error', 'You must be logged in to view apartment bookings.' );
         navigation.goBack();
         return;
       }
@@ -40,7 +40,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         .eq('owner_id', ownerId);
 
       if (apartmentsError) {
-        Alert.alert('Gabim', apartmentsError.message);
+        Alert.alert('Error', apartmentsError.message);
         return;
       }
 
@@ -79,7 +79,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
       }
 
       if (bookingsByOwnerError && bookingsByOwnerError.code !== '42703') {
-        Alert.alert('Gabim', bookingsByOwnerError.message);
+        Alert.alert('Error', bookingsByOwnerError.message);
         return;
       }
 
@@ -94,7 +94,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
             .order('start_date', { ascending: false });
 
       if (bookingsByApartmentError) {
-        Alert.alert('Gabim', bookingsByApartmentError.message);
+        Alert.alert('Error', bookingsByApartmentError.message);
         return;
       }
 
@@ -126,7 +126,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
               continue;
             }
 
-            Alert.alert('Gabim', guestError.message);
+            Alert.alert('Error', guestError.message);
             return;
           }
 
@@ -179,7 +179,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
 
   const getGuestPhone = (guest) => {
     if (!guest?.phone) {
-      return 'Nuk ka numer';
+      return 'No phone number';
     }
 
     return guest.phone;
@@ -195,7 +195,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
 
   const renderBooking = ({ item }) => {
     const guestPhone = getGuestPhoneFromBooking(item);
-    const hasGuestPhone = guestPhone !== 'Nuk ka numer';
+    const hasGuestPhone = guestPhone !== 'No phone number';
     const status = String(item.status || 'pending').toLowerCase();
     const canDecide = status === 'pending';
     const canCancel = !['cancelled', 'rejected'].includes(status);
@@ -215,14 +215,14 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{item.status || 'pending'}</Text>
         </View>
-        <Text style={styles.guestNameLabel}>Emri dhe mbiemri: {getGuestNameFromBooking(item)}</Text>
+        <Text style={styles.guestNameLabel}>Full name: {getGuestNameFromBooking(item)}</Text>
         <TouchableOpacity
           style={styles.phoneLink}
           onPress={() => openWhatsAppForPhone(guestPhone)}
           disabled={!hasGuestPhone}
         >
           <Text style={[styles.userIdLabel, !hasGuestPhone && styles.userIdLabelDisabled]}>
-            Numri i telefonit: {guestPhone}
+            Phone number: {guestPhone}
           </Text>
         </TouchableOpacity>
         {canDecide ? (
@@ -245,7 +245,7 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
   };
 
   const handleStatusChange = (booking, status) => {
-    Alert.alert('Ndrysho statusin', `Ta ndryshoj rezervimin ne ${status}?`, [
+    Alert.alert('Change status', `Change this booking to ${status}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Save',
@@ -257,14 +257,14 @@ export default function OwnerBookingHistoryScreen({ navigation }) {
           });
 
           if (error) {
-            Alert.alert('Gabim', error.message);
+            Alert.alert('Error', error.message);
             return;
           }
 
           await createNotification({
             userId: booking.user_id,
-            title: 'Statusi i rezervimit ndryshoi',
-            message: `${booking.apartment?.title || 'Rezervimi'} eshte ${status}.`,
+            title: 'Booking status changed',
+            message: `${booking.apartment?.title || 'Booking'} is ${status}.`,
             type: `booking_${status}`,
             bookingId: booking.id,
             apartmentId: booking.apartment_id,

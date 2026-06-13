@@ -27,12 +27,12 @@ export default function LoginScreen({ navigation }) {
     const normalizedPassword = password.trim();
 
     if (!normalizedEmail || !normalizedPassword) {
-      Alert.alert('Gabim', 'Ploteso email dhe password.');
+      Alert.alert('Error', 'Enter your email and password.');
       return;
     }
 
     if (!isValidEmail(normalizedEmail)) {
-      Alert.alert('Gabim', 'Shkruaj nje email valid.');
+      Alert.alert('Error', 'Enter a valid email address.');
       return;
     }
 
@@ -45,14 +45,14 @@ export default function LoginScreen({ navigation }) {
       });
 
       if (error) {
-        Alert.alert('Login deshtoi', error.message);
+        Alert.alert('Login failed', error.message);
         return;
       }
 
       const userId = data?.user?.id;
 
       if (!userId) {
-        Alert.alert('Gabim', 'Nuk u gjet perdoruesi.');
+        Alert.alert('Error', 'User not found.');
         return;
       }
 
@@ -63,7 +63,7 @@ export default function LoginScreen({ navigation }) {
         .maybeSingle();
 
       if (profileError) {
-        Alert.alert('Gabim', profileError.message);
+        Alert.alert('Error', profileError.message);
         return;
       }
 
@@ -77,7 +77,7 @@ export default function LoginScreen({ navigation }) {
         ]);
 
         if (insertError) {
-          Alert.alert('Gabim', insertError.message);
+          Alert.alert('Error', insertError.message);
           return;
         }
 
@@ -94,7 +94,7 @@ export default function LoginScreen({ navigation }) {
         routes: [{ name: targetScreen }],
       });
     } catch (err) {
-      Alert.alert('Gabim', 'Ndodhi nje problem gjate login-it.');
+      Alert.alert('Error', 'Something went wrong during login.');
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.eyebrow}>RENTFLOW</Text>
             <Text style={styles.title}>Welcome back</Text>
             <Text style={styles.subtitle}>
-              Hyr ne platforme dhe eksploro apartamente me nje pamje me moderne dhe me te qarte.
+              Sign in to explore apartments in a cleaner, more modern experience.
             </Text>
           </View>
 

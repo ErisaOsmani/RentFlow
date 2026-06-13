@@ -209,7 +209,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     }
 
     return updateMatchedNoRows
-      ? { message: 'Kontakti i owner-it nuk u ruajt. Supabase nuk lejoi ndryshimin e profilit te owner-it.' }
+      ? { message: 'The owner contact was not saved. Supabase did not allow updating the owner profile.' }
       : null;
   };
 
@@ -278,7 +278,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Lejo qasjen ne galeri per te zgjedhur nje foto.');
+      Alert.alert('Permission required', 'Allow gallery access to choose a photo.');
       return;
     }
 
@@ -297,7 +297,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     const selectedAssets = result.assets.slice(0, MAX_IMAGES);
 
     if (result.assets.length > MAX_IMAGES) {
-      Alert.alert('Limit reached', `Mundesh me zgjedh maksimumi ${MAX_IMAGES} foto.`);
+      Alert.alert('Limit reached', `You can choose up to ${MAX_IMAGES} photos.`);
     }
 
     setPickedImages(selectedAssets);
@@ -346,7 +346,7 @@ export default function AddApartmentScreen({ navigation, route }) {
 
   const handleSaveApartment = async () => {
     if (!title || !city || !description || !price || !rooms) {
-      Alert.alert('Error', 'Ploteso te gjitha fushat.');
+      Alert.alert('Error', 'Fill in all fields.');
       return;
     }
 
@@ -354,7 +354,7 @@ export default function AddApartmentScreen({ navigation, route }) {
     const parsedRooms = Number(rooms);
 
     if (Number.isNaN(parsedPrice) || Number.isNaN(parsedRooms)) {
-      Alert.alert('Error', 'Price dhe rooms duhet te jene numra.');
+      Alert.alert('Error', 'Price and rooms must be numbers.');
       return;
     }
 
@@ -362,12 +362,12 @@ export default function AddApartmentScreen({ navigation, route }) {
       (latitude.trim() && Number.isNaN(Number(latitude))) ||
       (longitude.trim() && Number.isNaN(Number(longitude)))
     ) {
-      Alert.alert('Error', 'Latitude dhe longitude duhet te jene numra.');
+      Alert.alert('Error', 'Latitude and longitude must be numbers.');
       return;
     }
 
     if (imageUrls.length > MAX_IMAGES) {
-      Alert.alert('Error', `Mundesh me shtu maksimumi ${MAX_IMAGES} foto.`);
+      Alert.alert('Error', `You can add up to ${MAX_IMAGES} photos.`);
       return;
     }
 
@@ -376,7 +376,7 @@ export default function AddApartmentScreen({ navigation, route }) {
       const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError || !authData?.user) {
-        Alert.alert('Error', 'User nuk u gjet.');
+        Alert.alert('Error', 'User not found.');
         return;
       }
 
@@ -476,7 +476,7 @@ export default function AddApartmentScreen({ navigation, route }) {
 
       Alert.alert(
         'Success',
-        editingApartment ? 'Banesa u perditesua me sukses.' : 'Banesa u shtua me sukses.'
+        editingApartment ? 'Apartment updated successfully.' : 'Apartment added successfully.'
       );
       navigation.goBack();
     } finally {
@@ -494,7 +494,7 @@ export default function AddApartmentScreen({ navigation, route }) {
           <Text style={styles.eyebrow}>NEW LISTING</Text>
           <Text style={styles.title}>{editingApartment ? 'Edit Apartment' : 'Add Apartment'}</Text>
           <Text style={styles.subtitle}>
-            Shto ose perditeso banese me foto, pershkrim dhe qira mujore.
+            Add or update an apartment with photos, a description, and monthly rent.
           </Text>
         </View>
 
@@ -591,7 +591,7 @@ export default function AddApartmentScreen({ navigation, route }) {
           keyboardType="numeric"
         />
         <TextInput
-          placeholder="Currency, e.g. EUR, USD, €, $, Lek"
+          placeholder="Currency, e.g. EUR, USD, GBP, HUF"
           placeholderTextColor="#8F97A8"
           value={selectedCurrency?.label || currency}
           onPressIn={() => setShowCurrencyPicker(true)}

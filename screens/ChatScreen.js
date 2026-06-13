@@ -37,7 +37,7 @@ export default function ChatScreen({ navigation, route }) {
       const { user, error: authError } = await getCurrentUser();
 
       if (authError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per chat.');
+        Alert.alert('Error', 'You must be logged in to use chat.');
         navigation.goBack();
         return;
       }
@@ -71,7 +71,7 @@ export default function ChatScreen({ navigation, route }) {
       const { messages: loadedMessages, error } = await loadConversationMessages(activeConversation.id);
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -99,7 +99,7 @@ export default function ChatScreen({ navigation, route }) {
       });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -138,7 +138,7 @@ export default function ChatScreen({ navigation, route }) {
             <Text style={styles.backChipText}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>Komunikim direkt brenda RentFlow.</Text>
+          <Text style={styles.subtitle}>Chat directly inside RentFlow.</Text>
         </View>
 
         {loading ? (
@@ -151,8 +151,8 @@ export default function ChatScreen({ navigation, route }) {
             contentContainerStyle={styles.messagesContent}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Nis biseden</Text>
-                <Text style={styles.emptyText}>Pyet owner-in per kushtet, lagjen ose disponueshmerine.</Text>
+                <Text style={styles.emptyTitle}>Start the conversation</Text>
+                <Text style={styles.emptyText}>Ask the owner about terms, the neighborhood, or availability.</Text>
               </View>
             }
           />
@@ -162,7 +162,7 @@ export default function ChatScreen({ navigation, route }) {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder="Shkruaj mesazh..."
+            placeholder="Write a message..."
             placeholderTextColor="#8F97A8"
             style={styles.input}
             multiline

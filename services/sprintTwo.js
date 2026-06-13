@@ -53,7 +53,7 @@ export const updateUserProfile = async ({ userId, firstName, lastName, phone }) 
     return { error };
   }
 
-  return { error: { message: 'Profili nuk u ruajt. Kontrollo kolonat e tabeles users.' } };
+  return { error: { message: 'The profile was not saved. Check the users table columns.' } };
 };
 
 export const setProfileVerification = async ({ userId, verified }) => {
@@ -79,12 +79,12 @@ export const setProfileVerification = async ({ userId, verified }) => {
     return { error };
   }
 
-  return { error: { message: 'Ekzekuto supabase_sprint2.sql per profile te verifikuara.' } };
+  return { error: { message: 'Run supabase_sprint2.sql for verified profiles.' } };
 };
 
 export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }) => {
   if (!apartmentId || !ownerId || !clientId) {
-    return { conversation: null, error: { message: 'Mungojne te dhenat per chat.' } };
+    return { conversation: null, error: { message: 'Missing chat data.' } };
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -98,7 +98,7 @@ export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }
   if (isMissingSchemaError(existingError)) {
     return {
       conversation: null,
-      error: { message: 'Ekzekuto supabase_sprint2.sql per ta aktivizuar chat-in.' },
+      error: { message: 'Run supabase_sprint2.sql to enable chat.' },
       unavailable: true,
     };
   }
@@ -124,7 +124,7 @@ export const getOrCreateConversation = async ({ apartmentId, ownerId, clientId }
   if (isMissingSchemaError(error)) {
     return {
       conversation: null,
-      error: { message: 'Ekzekuto supabase_sprint2.sql per ta aktivizuar chat-in.' },
+      error: { message: 'Run supabase_sprint2.sql to enable chat.' },
       unavailable: true,
     };
   }
@@ -169,7 +169,7 @@ const notifyMessageRecipient = async ({ conversationId, senderId, body }) => {
 
   await createNotification({
     userId: recipientId,
-    title: 'Mesazh i ri',
+    title: 'New message',
     message: preview,
     type: 'chat_message',
     apartmentId: conversation.apartment_id,
@@ -180,7 +180,7 @@ export const sendConversationMessage = async ({ conversationId, senderId, body }
   const normalizedBody = body.trim();
 
   if (!normalizedBody) {
-    return { message: null, error: { message: 'Mesazhi nuk mund te jete bosh.' } };
+    return { message: null, error: { message: 'The message cannot be empty.' } };
   }
 
   const payload = {
@@ -196,7 +196,7 @@ export const sendConversationMessage = async ({ conversationId, senderId, body }
     .maybeSingle();
 
   if (isMissingSchemaError(error)) {
-    return { message: null, error: { message: 'Ekzekuto supabase_sprint2.sql per mesazhe.' } };
+    return { message: null, error: { message: 'Run supabase_sprint2.sql for messages.' } };
   }
 
   if (error?.code === '42501' || error?.message?.toLowerCase().includes('row-level security')) {

@@ -56,14 +56,14 @@ export default function SearchScreen({ navigation }) {
         .order('city', { ascending: true });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
       const { bookedApartmentIds, error: bookedError } = await getActiveBookedApartmentIds();
 
       if (bookedError) {
-        Alert.alert('Gabim', bookedError.message);
+        Alert.alert('Error', bookedError.message);
         return;
       }
 
@@ -71,7 +71,7 @@ export default function SearchScreen({ navigation }) {
       const uniqueCities = Array.from(new Set(availableApartments.map((item) => item.city).filter(Boolean)));
       setCities(uniqueCities);
     } catch (err) {
-      Alert.alert('Gabim', 'Dështoi ngarkim qyteteve.');
+      Alert.alert('Error', 'Failed to load cities.');
     }
   }, []);
 
@@ -99,14 +99,14 @@ export default function SearchScreen({ navigation }) {
       }
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
       const { bookedApartmentIds, error: bookedError } = await getActiveBookedApartmentIds();
 
       if (bookedError) {
-        Alert.alert('Gabim', bookedError.message);
+        Alert.alert('Error', bookedError.message);
         return;
       }
 
@@ -221,9 +221,9 @@ export default function SearchScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.cityBadge}>
-          <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+          <Text style={styles.cardCity}>{item.city || 'No city'}</Text>
         </View>
-        <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+        <Text style={styles.cardDesc}>{item.description || 'No description.'}</Text>
         <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
         {item.smartMatch ? (
           <View style={styles.smartMatchBox}>
@@ -279,7 +279,7 @@ export default function SearchScreen({ navigation }) {
         <Text style={styles.cardMeta}>
           {hasMapLocation(item)
             ? `${Number(item.latitude).toFixed(4)}, ${Number(item.longitude).toFixed(4)}`
-            : 'Lokacioni ne harte mungon'}
+            : 'Map location is missing'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -299,7 +299,7 @@ export default function SearchScreen({ navigation }) {
           <View style={styles.similarNotice}>
             <Text style={styles.similarNoticeTitle}>No exact matches</Text>
             <Text style={styles.similarNoticeText}>
-              Po te shfaqim banesa te ngjashme me kerkimin tend.
+              Showing apartments similar to your search.
             </Text>
           </View>
         ) : null}
@@ -307,7 +307,7 @@ export default function SearchScreen({ navigation }) {
           <View style={styles.mapPreview}>
             <Text style={styles.mapPreviewTitle}>Map view</Text>
             <Text style={styles.mapPreviewText}>
-              {apartments.filter(hasMapLocation).length} listings kane koordinata reale. Hap detajet per Google Maps.
+              {apartments.filter(hasMapLocation).length} listings have real coordinates. Open details for Google Maps.
             </Text>
           </View>
         ) : null}
@@ -350,7 +350,7 @@ export default function SearchScreen({ navigation }) {
       <View style={styles.filterSection}>
         <Text style={styles.filterLabel}>Location search</Text>
         <TextInput
-          placeholder="Lagje, adrese ose qytet"
+          placeholder="Neighborhood, address, or city"
           placeholderTextColor="#8F97A8"
           style={styles.filterInput}
           value={locationText}
@@ -418,7 +418,7 @@ export default function SearchScreen({ navigation }) {
         onPress={() => setMapOnly((current) => !current)}
       >
         <Text style={[styles.mapOnlyText, mapOnly && styles.mapOnlyTextActive]}>
-          Vetem banesa me lokacion ne harte
+          Only apartments with a map location
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -518,7 +518,7 @@ export default function SearchScreen({ navigation }) {
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No apartments found</Text>
-          <Text style={styles.emptyText}>Nuk ka banesa te lira per momentin.</Text>
+          <Text style={styles.emptyText}>There are no available apartments right now.</Text>
         </View>
       )}
     </SafeAreaView>

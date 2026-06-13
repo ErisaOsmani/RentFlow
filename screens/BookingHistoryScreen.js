@@ -28,7 +28,7 @@ export default function BookingHistoryScreen({ navigation }) {
       const { user, error: authError } = await getCurrentUser();
 
       if (authError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per te pare rezervimet.' );
+        Alert.alert('Error', 'You must be logged in to view bookings.' );
         navigation.goBack();
         return;
       }
@@ -61,7 +61,7 @@ export default function BookingHistoryScreen({ navigation }) {
       }
 
       if (bookingsError) {
-        Alert.alert('Gabim', bookingsError.message);
+        Alert.alert('Error', bookingsError.message);
         return;
       }
 
@@ -98,7 +98,7 @@ export default function BookingHistoryScreen({ navigation }) {
       }
 
       if (apartmentsError) {
-        Alert.alert('Gabim', apartmentsError.message);
+        Alert.alert('Error', apartmentsError.message);
         return;
       }
 
@@ -128,7 +128,7 @@ export default function BookingHistoryScreen({ navigation }) {
           }
 
           if (ownerError) {
-            Alert.alert('Gabim', ownerError.message);
+            Alert.alert('Error', ownerError.message);
             return;
           }
 
@@ -190,9 +190,9 @@ export default function BookingHistoryScreen({ navigation }) {
           onPress={() => openWhatsAppForPhone(ownerPhone)}
           disabled={!ownerPhone}
         >
-          <Text style={styles.phoneLabel}>Numri i owner-it</Text>
+          <Text style={styles.phoneLabel}>Owner phone number</Text>
           <Text style={[styles.phoneValue, !ownerPhone && styles.phoneValueDisabled]}>
-            {ownerPhone || 'Nuk ka numer'}
+            {ownerPhone || 'No phone number'}
           </Text>
         </TouchableOpacity>
         {!['cancelled', 'rejected'].includes(String(item.status || 'pending').toLowerCase()) ? (
@@ -205,10 +205,10 @@ export default function BookingHistoryScreen({ navigation }) {
   };
 
   const handleCancelBooking = (booking) => {
-    Alert.alert('Cancel booking', 'A je i sigurt qe do ta anulosh kete rezervim?', [
-      { text: 'Jo', style: 'cancel' },
+    Alert.alert('Cancel booking', 'Are you sure you want to cancel this booking?', [
+      { text: 'No', style: 'cancel' },
       {
-        text: 'Po, anulo',
+        text: 'Yes, cancel',
         style: 'destructive',
         onPress: async () => {
           const { error } = await updateBookingStatus({
@@ -218,14 +218,14 @@ export default function BookingHistoryScreen({ navigation }) {
           });
 
           if (error) {
-            Alert.alert('Gabim', error.message);
+            Alert.alert('Error', error.message);
             return;
           }
 
           await createNotification({
             userId: booking.owner_id || booking.apartment?.owner_id,
-            title: 'Rezervimi u anulua',
-            message: `${booking.apartment?.title || 'Banesa'} u anulua nga klienti.`,
+            title: 'Booking canceled',
+            message: `${booking.apartment?.title || 'Apartment'} was canceled by the client.`,
             type: 'booking_cancelled',
             bookingId: booking.id,
             apartmentId: booking.apartment_id,

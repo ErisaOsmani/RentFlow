@@ -90,7 +90,7 @@ export default function ApartmentDetailScreen() {
           .order('start_date', { ascending: false });
 
         if (fallback.error) {
-          Alert.alert('Gabim', fallback.error.message);
+          Alert.alert('Error', fallback.error.message);
           return;
         }
 
@@ -99,7 +99,7 @@ export default function ApartmentDetailScreen() {
       }
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         await loadRecentBookings();
         return;
       }
@@ -132,7 +132,7 @@ export default function ApartmentDetailScreen() {
       }
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -264,12 +264,12 @@ export default function ApartmentDetailScreen() {
     const normalizedEnd = endDate.trim();
 
     if (!normalizedStart || !normalizedEnd) {
-      Alert.alert('Gabim', 'Ploteso datat e rezervimit.');
+      Alert.alert('Error', 'Fill in the booking dates.');
       return;
     }
 
     if (!monthCount) {
-      Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
+      Alert.alert('Error', 'The end date must be after the start date.');
       return;
     }
 
@@ -279,7 +279,7 @@ export default function ApartmentDetailScreen() {
       const { user, error: authError } = await getCurrentUser();
 
       if (authError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per te bere rezervim.');
+        Alert.alert('Error', 'You must be logged in to make a booking.');
         return;
       }
 
@@ -293,7 +293,7 @@ export default function ApartmentDetailScreen() {
           .maybeSingle();
 
         if (apartmentError) {
-          Alert.alert('Gabim', apartmentError.message);
+          Alert.alert('Error', apartmentError.message);
           return;
         }
 
@@ -301,7 +301,7 @@ export default function ApartmentDetailScreen() {
       }
 
       if (!ownerId) {
-        Alert.alert('Gabim', 'Owner-i i kesaj banese nuk u gjet.');
+        Alert.alert('Error', 'The owner of this apartment was not found.');
         return;
       }
 
@@ -324,7 +324,7 @@ export default function ApartmentDetailScreen() {
         }
 
         if (profileError) {
-          Alert.alert('Gabim', profileError.message);
+          Alert.alert('Error', profileError.message);
           return;
         }
 
@@ -339,15 +339,15 @@ export default function ApartmentDetailScreen() {
       });
 
       if (conflictError) {
-        Alert.alert('Gabim', conflictError.message);
+        Alert.alert('Error', conflictError.message);
         return;
       }
 
       if (conflictingBookings?.length) {
         const conflict = conflictingBookings[0];
         Alert.alert(
-          'Gabim',
-          `Ky apartament eshte i rezervuar nga ${conflict.start_date} deri me ${conflict.end_date}. Zgjidh data te tjera.`
+          'Error',
+          `This apartment is booked from ${conflict.start_date} until ${conflict.end_date}. Choose different dates.`
         );
         return;
       }
@@ -364,14 +364,14 @@ export default function ApartmentDetailScreen() {
       });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
       await createNotification({
         userId: ownerId,
-        title: 'Rezervim i ri',
-        message: `${apartment.title} ka nje kerkese te re nga ${normalizedStart} deri me ${normalizedEnd}.`,
+        title: 'New booking request',
+        message: `${apartment.title} has a new request from ${normalizedStart} until ${normalizedEnd}.`,
         type: 'booking_created',
         bookingId: booking?.id || null,
         apartmentId: apartment.id,
@@ -390,7 +390,7 @@ export default function ApartmentDetailScreen() {
     const { user } = await getCurrentUser();
 
     if (!user) {
-      Alert.alert('Gabim', 'Duhet te jesh i kycur per favorites.');
+      Alert.alert('Error', 'You must be logged in to use favorites.');
       return;
     }
 
@@ -401,12 +401,12 @@ export default function ApartmentDetailScreen() {
     });
 
     if (result.error) {
-      Alert.alert('Gabim', result.error.message);
+      Alert.alert('Error', result.error.message);
       return;
     }
 
     if (favoriteUnavailable) {
-      Alert.alert('Info', 'Ekzekuto supabase_sprint1.sql per me aktivizu favorites.');
+      Alert.alert('Info', 'Run supabase_sprint1.sql to enable favorites.');
       return;
     }
 
@@ -417,7 +417,7 @@ export default function ApartmentDetailScreen() {
     const { user } = await getCurrentUser();
 
     if (!user) {
-      Alert.alert('Gabim', 'Duhet te jesh i kycur per review.');
+      Alert.alert('Error', 'You must be logged in to leave a review.');
       return;
     }
 
@@ -431,18 +431,18 @@ export default function ApartmentDetailScreen() {
       });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
       if (reviewData.unavailable) {
-        Alert.alert('Info', 'Ekzekuto supabase_sprint1.sql per me aktivizu reviews.');
+        Alert.alert('Info', 'Run supabase_sprint1.sql to enable reviews.');
         return;
       }
 
       setReviewComment('');
       await loadReviews();
-      Alert.alert('Success', 'Review u ruajt.');
+      Alert.alert('Success', 'Review saved.');
     } finally {
       setReviewLoading(false);
     }
@@ -454,7 +454,7 @@ export default function ApartmentDetailScreen() {
       : [apartment?.address, apartment?.neighborhood, apartment?.city].filter(Boolean).join(', ');
 
     if (!query) {
-      Alert.alert('Map', 'Lokacioni nuk eshte shtuar ende.');
+      Alert.alert('Map', 'The location has not been added yet.');
       return;
     }
 
@@ -466,12 +466,12 @@ export default function ApartmentDetailScreen() {
     const { user, error } = await getCurrentUser();
 
     if (error || !user) {
-      Alert.alert('Gabim', 'Duhet te jesh i kycur per chat.');
+      Alert.alert('Error', 'You must be logged in to use chat.');
       return;
     }
 
     if (!apartment?.owner_id) {
-      Alert.alert('Gabim', 'Owner-i i kesaj banese nuk u gjet.');
+      Alert.alert('Error', 'The owner of this apartment was not found.');
       return;
     }
 
@@ -561,7 +561,7 @@ export default function ApartmentDetailScreen() {
         {qualityReport.issues.length ? (
           <Text style={styles.trustText}>{qualityReport.issues.slice(0, 3).join(' | ')}</Text>
         ) : (
-          <Text style={styles.trustText}>Listing-u ka te dhena te plota per vendimmarrje me te lehte.</Text>
+          <Text style={styles.trustText}>This listing has complete details for easier decision-making.</Text>
         )}
       </View>
 
@@ -581,11 +581,11 @@ export default function ApartmentDetailScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Location</Text>
         <TouchableOpacity style={styles.mapBox} activeOpacity={0.88} onPress={openGoogleMaps}>
-          <Text style={styles.mapTitle}>{apartment.address || apartment.neighborhood || apartment.city || 'Lokacion'}</Text>
+          <Text style={styles.mapTitle}>{apartment.address || apartment.neighborhood || apartment.city || 'Location'}</Text>
           <Text style={styles.mapText}>
             {hasMapLocation(apartment)
               ? `${Number(apartment.latitude).toFixed(5)}, ${Number(apartment.longitude).toFixed(5)}`
-              : 'Hap ne Google Maps me adrese/qytet.'}
+              : 'Open in Google Maps with the address/city.'}
           </Text>
           <Text style={styles.mapButtonText}>Open Google Maps</Text>
         </TouchableOpacity>
@@ -608,7 +608,7 @@ export default function ApartmentDetailScreen() {
             {ownerVerificationLabel}
           </Text>
           <Text style={[styles.ownerPhone, !ownerPhone && styles.ownerPhoneDisabled]}>
-            {ownerPhone || 'Nuk ka numer'}
+            {ownerPhone || 'No phone number'}
           </Text>
         </TouchableOpacity>
         {!isAdminView ? (

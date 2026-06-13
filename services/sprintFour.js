@@ -47,45 +47,45 @@ export const getListingQualityReport = (apartment) => {
 
   if (imageCount === 0) {
     score -= 26;
-    issues.push('Nuk ka foto');
-    suggestions.push('Shto te pakten 3 foto te qarta nga dhomat kryesore.');
+    issues.push('No photos');
+    suggestions.push('Add at least 3 clear photos of the main rooms.');
   } else if (imageCount < 3) {
     score -= 14;
-    issues.push('Pak foto');
-    suggestions.push('Shto me shume foto per kuzhinen, dhomen e dites dhe banjon.');
+    issues.push('Few photos');
+    suggestions.push('Add more photos of the kitchen, living room, and bathroom.');
   }
 
   if (descriptionLength < 70) {
     score -= 18;
-    issues.push('Pershkrim i shkurter');
-    suggestions.push('Zgjero pershkrimin me lokacion, stil banimi dhe perfitime praktike.');
+    issues.push('Short description');
+    suggestions.push('Expand the description with location, living style, and practical benefits.');
   }
 
   if (!apartment?.neighborhood && !apartment?.address) {
     score -= 10;
-    issues.push('Lokacion jo i detajuar');
-    suggestions.push('Shto lagjen ose adresen qe klientet ta kuptojne zonen.');
+    issues.push('Location is not detailed');
+    suggestions.push('Add the neighborhood or address so clients understand the area.');
   }
 
   if (amenityCount === 0) {
     score -= 14;
-    issues.push('Amenities mungojne');
-    suggestions.push('Sheno amenities si Wi-Fi, parking, ballkon, lift ose ngrohje.');
+    issues.push('Amenities are missing');
+    suggestions.push('Add amenities such as Wi-Fi, parking, balcony, elevator, or heating.');
   } else if (amenityCount < 3) {
     score -= 6;
-    suggestions.push('Shto cdo amenity reale qe e rrit besueshmerine e listing-ut.');
+    suggestions.push('Add every real amenity that increases listing credibility.');
   }
 
   if (!rooms || rooms < 1) {
     score -= 14;
-    issues.push('Numri i dhomave mungon');
-    suggestions.push('Vendos numrin real te dhomave.');
+    issues.push('The number of rooms is missing');
+    suggestions.push('Enter the real number of rooms.');
   }
 
   if (!price || price < 50) {
     score -= 18;
-    issues.push('Cmimi duket jo realist');
-    suggestions.push('Kontrollo cmimin mujor para publikimit.');
+    issues.push('The price seems unrealistic');
+    suggestions.push('Check the monthly price before publishing.');
   }
 
   if (rooms && price) {
@@ -93,8 +93,8 @@ export const getListingQualityReport = (apartment) => {
 
     if (pricePerRoom < 80 || pricePerRoom > 1200) {
       score -= 12;
-      issues.push('Cmim i pazakonte per dhome');
-      suggestions.push('Krahaso cmimin me banesa te ngjashme ne te njejtin qytet.');
+      issues.push('Unusual price per room');
+      suggestions.push('Compare the price with similar apartments in the same city.');
     }
   }
 
@@ -102,15 +102,15 @@ export const getListingQualityReport = (apartment) => {
 
   return {
     score: normalizedScore,
-    label: normalizedScore >= 82 ? 'Listing i forte' : normalizedScore >= 60 ? 'Ka hapesire per permiresim' : 'Listing i dobet',
+    label: normalizedScore >= 82 ? 'Strong listing' : normalizedScore >= 60 ? 'Room for improvement' : 'Weak listing',
     risk: normalizedScore >= 82 ? 'low' : normalizedScore >= 60 ? 'medium' : 'high',
     issues,
-    suggestions: suggestions.length ? suggestions : ['Listing-u duket mire. Mbaje te perditesuar me foto dhe cmim real.'],
+    suggestions: suggestions.length ? suggestions : ['The listing looks good. Keep it updated with photos and realistic pricing.'],
   };
 };
 
 export const generateApartmentDescription = (apartment) => {
-  const title = String(apartment?.title || 'Kjo banese').trim();
+  const title = String(apartment?.title || 'This apartment').trim();
   const city = String(apartment?.city || '').trim();
   const neighborhood = String(apartment?.neighborhood || '').trim();
   const rooms = toNumber(apartment?.rooms);
@@ -118,15 +118,15 @@ export const generateApartmentDescription = (apartment) => {
   const amenities = getAmenityLabels(apartment);
   const location = [neighborhood, city].filter(Boolean).join(', ');
   const amenityText = amenities.length
-    ? `E pajisur me ${amenities.slice(0, 5).join(', ').toLowerCase()}, banesa ofron komoditet per jetese te perditshme.`
-    : 'Banesa eshte e pershtatshme per kliente qe kerkojne nje hapesire funksionale dhe te rregullt.';
+    ? `Equipped with ${amenities.slice(0, 5).join(', ').toLowerCase()}, this apartment offers everyday comfort.`
+    : 'This apartment is suitable for clients looking for a functional and well-kept space.';
 
   return [
-    `${title} ${location ? `ne ${location}` : ''} ofron nje ambient praktik dhe te rehatshem per qendrim mujor.`,
-    rooms ? `Ka ${rooms} ${rooms === 1 ? 'dhome' : 'dhoma'} dhe organizim te pershtatshem per banim.` : '',
-    price ? `Qiraja mujore eshte ${formatPrice(price, apartment?.currency)}, me fokus ne vlere dhe lokacion.` : '',
+    `${title} ${location ? `in ${location}` : ''} offers a practical and comfortable space for a monthly stay.`,
+    rooms ? `It has ${rooms} ${rooms === 1 ? 'room' : 'rooms'} and a layout suitable for living.` : '',
+    price ? `The monthly rent is ${formatPrice(price, apartment?.currency)}, with a focus on value and location.` : '',
     amenityText,
-    'Kontakto owner-in per me shume detaje, foto shtese ose vizite.',
+    'Contact the owner for more details, additional photos, or a viewing.',
   ].filter(Boolean).join(' ');
 };
 
@@ -223,16 +223,16 @@ export const getMarketAwareListingQualityReport = (apartment, marketApartments =
 
   const nextScore = clamp(report.score - (distance > 0.75 ? 16 : 10), 0, 100);
   const nextRisk = nextScore >= 82 ? 'low' : nextScore >= 60 ? 'medium' : 'high';
-  const priceDirection = price > marketMedianPrice ? 'me i larte' : 'me i ulet';
+  const priceDirection = price > marketMedianPrice ? 'higher' : 'lower';
 
   return {
     ...report,
     score: nextScore,
-    label: nextScore >= 82 ? 'Listing i forte' : nextScore >= 60 ? 'Ka hapesire per permiresim' : 'Listing i dobet',
+    label: nextScore >= 82 ? 'Strong listing' : nextScore >= 60 ? 'Room for improvement' : 'Weak listing',
     risk: nextRisk,
-    issues: [...report.issues, 'Cmim larg tregut lokal'],
+    issues: [...report.issues, 'Price far from the local market'],
     suggestions: [
-      `Cmimi eshte rreth ${Math.round(distance * 100)}% ${priceDirection} se listing-et e ngjashme ne kete qytet.`,
+      `The price is about ${Math.round(distance * 100)}% ${priceDirection} than similar listings in this city.`,
       ...report.suggestions,
     ],
     marketMedianPrice,
@@ -276,18 +276,18 @@ export const getPreferenceSummary = (preferences = {}) => {
   }
 
   if (preferences.maxPrice) {
-    parts.push(`deri ${formatPrice(preferences.maxPrice)}`);
+    parts.push(`up to ${formatPrice(preferences.maxPrice)}`);
   }
 
   if (preferences.minRooms) {
-    parts.push(`${preferences.minRooms}+ dhoma`);
+    parts.push(`${preferences.minRooms}+ rooms`);
   }
 
   if (preferences.amenities?.length) {
     parts.push(`${preferences.amenities.length} amenities`);
   }
 
-  return parts.length ? parts.join(' | ') : 'Bazuar ne cilesi, cmim dhe plotesi te listing-ut';
+  return parts.length ? parts.join(' | ') : 'Based on quality, price, and listing completeness';
 };
 
 export const scoreApartmentMatch = (apartment, preferences = {}) => {
@@ -300,22 +300,22 @@ export const scoreApartmentMatch = (apartment, preferences = {}) => {
 
   if (preferences.city && normalizeText(apartment?.city) === normalizeText(preferences.city)) {
     score += 16;
-    reasons.push(preferences.learnedFromUser ? 'qytet qe e preferon' : 'qyteti perputhet');
+    reasons.push(preferences.learnedFromUser ? 'city you prefer' : 'city matches');
   }
 
   if (preferences.locationText && hasTextMatch(apartment, preferences.locationText)) {
     score += 12;
-    reasons.push('lokacion i afert');
+    reasons.push('nearby location');
   }
 
   if (preferences.searchText && hasTextMatch(apartment, preferences.searchText)) {
     score += 12;
-    reasons.push('perputhet me kerkimin');
+    reasons.push('matches the search');
   }
 
   if (preferences.maxPrice && price <= preferences.maxPrice) {
     score += 12;
-    reasons.push('brenda buxhetit');
+    reasons.push('within budget');
   }
 
   if (preferences.targetPrice && price) {
@@ -323,7 +323,7 @@ export const scoreApartmentMatch = (apartment, preferences = {}) => {
 
     if (distance <= 0.18) {
       score += 8;
-      reasons.push('cmim i ngjashem me preferencat');
+      reasons.push('price similar to preferences');
     } else if (distance > 0.55) {
       score -= 6;
     }
@@ -335,14 +335,14 @@ export const scoreApartmentMatch = (apartment, preferences = {}) => {
 
   if (preferences.minRooms && rooms >= preferences.minRooms) {
     score += 10;
-    reasons.push('ka mjaft dhoma');
+    reasons.push('has enough rooms');
   }
 
   const matchedAmenities = (preferences.amenities || []).filter((key) => Boolean(apartment?.[key]));
 
   if (matchedAmenities.length) {
     score += matchedAmenities.length * 5;
-    reasons.push(`${matchedAmenities.length} amenities te kerkuara`);
+    reasons.push(`${matchedAmenities.length} requested amenities`);
   }
 
   score += Math.round(quality.score * 0.18);

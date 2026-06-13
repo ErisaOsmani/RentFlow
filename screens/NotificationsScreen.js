@@ -27,7 +27,7 @@ export default function NotificationsScreen({ navigation }) {
       const { user, error: userError } = await getCurrentUser();
 
       if (userError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per njoftime.');
+        Alert.alert('Error', 'You must be logged in to view notifications.');
         navigation.goBack();
         return;
       }
@@ -35,7 +35,7 @@ export default function NotificationsScreen({ navigation }) {
       const result = await loadNotifications(user.id);
 
       if (result.error) {
-        Alert.alert('Gabim', result.error.message);
+        Alert.alert('Error', result.error.message);
         return;
       }
 
@@ -94,7 +94,7 @@ export default function NotificationsScreen({ navigation }) {
       ) : unavailable ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Notifications not configured</Text>
-          <Text style={styles.emptyText}>Ekzekuto supabase_sprint1.sql per me aktivizu njoftimet.</Text>
+          <Text style={styles.emptyText}>Run supabase_sprint1.sql to enable notifications.</Text>
         </View>
       ) : notifications.length ? (
         <FlatList
@@ -106,7 +106,7 @@ export default function NotificationsScreen({ navigation }) {
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No notifications</Text>
-          <Text style={styles.emptyText}>Aktivitetet e rezervimeve do te shfaqen ketu.</Text>
+          <Text style={styles.emptyText}>Booking activity will appear here.</Text>
         </View>
       )}
     </SafeAreaView>

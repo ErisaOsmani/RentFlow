@@ -53,7 +53,7 @@ export default function BookingScreen({ route, navigation }) {
         .order('start_date', { ascending: false });
 
       if (fallback.error) {
-        Alert.alert('Gabim', fallback.error.message);
+        Alert.alert('Error', fallback.error.message);
         return;
       }
 
@@ -62,7 +62,7 @@ export default function BookingScreen({ route, navigation }) {
     }
 
     if (error) {
-      Alert.alert('Gabim', error.message);
+      Alert.alert('Error', error.message);
       return;
     }
 
@@ -80,12 +80,12 @@ export default function BookingScreen({ route, navigation }) {
     const normalizedEnd = end.trim();
 
     if (!normalizedStart || !normalizedEnd) {
-      Alert.alert('Gabim', 'Ploteso datat e rezervimit.');
+      Alert.alert('Error', 'Fill in the booking dates.');
       return;
     }
 
     if (!monthCount) {
-      Alert.alert('Gabim', 'Data e mbarimit duhet te jete pas dates se fillimit.');
+      Alert.alert('Error', 'The end date must be after the start date.');
       return;
     }
 
@@ -95,7 +95,7 @@ export default function BookingScreen({ route, navigation }) {
       const { user } = await getCurrentUser();
 
       if (!user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per te bere rezervim.');
+        Alert.alert('Error', 'You must be logged in to make a booking.');
         return;
       }
 
@@ -109,7 +109,7 @@ export default function BookingScreen({ route, navigation }) {
           .maybeSingle();
 
         if (apartmentError) {
-          Alert.alert('Gabim', apartmentError.message);
+          Alert.alert('Error', apartmentError.message);
           return;
         }
 
@@ -117,7 +117,7 @@ export default function BookingScreen({ route, navigation }) {
       }
 
       if (!ownerId) {
-        Alert.alert('Gabim', 'Owner-i i kesaj banese nuk u gjet.');
+        Alert.alert('Error', 'The owner of this apartment was not found.');
         return;
       }
 
@@ -140,7 +140,7 @@ export default function BookingScreen({ route, navigation }) {
         }
 
         if (profileError) {
-          Alert.alert('Gabim', profileError.message);
+          Alert.alert('Error', profileError.message);
           return;
         }
 
@@ -155,15 +155,15 @@ export default function BookingScreen({ route, navigation }) {
       });
 
       if (conflictError) {
-        Alert.alert('Gabim', conflictError.message);
+        Alert.alert('Error', conflictError.message);
         return;
       }
 
       if (conflictingBookings?.length) {
         const conflict = conflictingBookings[0];
         Alert.alert(
-          'Gabim',
-          `Ky apartament eshte i rezervuar nga ${conflict.start_date} deri me ${conflict.end_date}. Zgjidh data te tjera.`
+          'Error',
+          `This apartment is booked from ${conflict.start_date} until ${conflict.end_date}. Choose different dates.`
         );
         return;
       }
@@ -180,15 +180,15 @@ export default function BookingScreen({ route, navigation }) {
       });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         await loadUnavailableRanges();
         return;
       }
 
       await createNotification({
         userId: ownerId,
-        title: 'Rezervim i ri',
-        message: `${apartment.title} ka nje kerkese te re nga ${normalizedStart} deri me ${normalizedEnd}.`,
+        title: 'New booking request',
+        message: `${apartment.title} has a new request from ${normalizedStart} until ${normalizedEnd}.`,
         type: 'booking_created',
         bookingId: booking?.id || null,
         apartmentId: apartment.id,
@@ -221,7 +221,7 @@ export default function BookingScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>Choose your stay</Text>
           <View style={styles.locationBox}>
             <Text style={styles.locationLabel}>City</Text>
-            <Text style={styles.locationValue}>{apartment.city || 'Pa qytet'}</Text>
+            <Text style={styles.locationValue}>{apartment.city || 'No city'}</Text>
           </View>
 
           <DateRangeCalendar

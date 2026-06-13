@@ -107,7 +107,7 @@ export default function DateRangeCalendar({ startDate, endDate, onChange, unavai
     }
 
     if (rangeHasBookedDate(startDate, nextDate)) {
-      Alert.alert('Datat nuk jane te lira', 'Zgjidh nje periudhe qe nuk prek rezervimet ekzistuese.');
+      Alert.alert('Dates are not available', 'Choose a date range that does not overlap existing bookings.');
       return;
     }
 

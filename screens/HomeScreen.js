@@ -80,7 +80,7 @@ export default function HomeScreen({ navigation }) {
       const recommended = getRecommendedApartments(availableApartments, recommendationPreferences, 4);
 
       const grouped = availableApartments.reduce((acc, item) => {
-        const city = item.city || 'Pa qytet';
+        const city = item.city || 'No city';
         const existing = acc.find((section) => section.title === city);
 
         if (existing) {
@@ -179,7 +179,7 @@ export default function HomeScreen({ navigation }) {
   }, [loadUnreadMessages]);
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -190,7 +190,7 @@ export default function HomeScreen({ navigation }) {
             const { error } = await logoutUser();
 
             if (error) {
-              Alert.alert('Gabim', error.message);
+              Alert.alert('Error', error.message);
               return;
             }
 
@@ -222,7 +222,7 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
       <Text style={styles.subtitle}>
-        Klientat mund t'i shohin banesat sipas qyteteve dhe me pershkrim te plote.
+        Clients can browse apartments by city with complete descriptions.
       </Text>
 
       <View style={styles.heroButtons}>
@@ -278,9 +278,9 @@ export default function HomeScreen({ navigation }) {
         onRefresh={loadApartments}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka banesa ende</Text>}
+            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>No apartments yet</Text>}
             <Text style={styles.emptyText}>
-              {loading ? 'Po ngarkohen listing-et...' : 'Owner-at ende nuk kane shtuar banesa.'}
+              {loading ? 'Loading listings...' : 'Owners have not added apartments yet.'}
             </Text>
           </View>
         }
@@ -303,11 +303,11 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </View>
               <View style={styles.cityBadge}>
-                <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+                <Text style={styles.cardCity}>{item.city || 'No city'}</Text>
               </View>
-              <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+              <Text style={styles.cardDesc}>{item.description || 'No description.'}</Text>
               <Text style={styles.cardMeta}>
-                {item.rooms} rooms | {item.neighborhood || item.city || 'Lokacion'}
+                {item.rooms} rooms | {item.neighborhood || item.city || 'Location'}
               </Text>
               <View style={styles.amenitiesRow}>
                 {getAmenityLabels(item).slice(0, 4).map((label) => (

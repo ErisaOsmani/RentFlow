@@ -26,7 +26,7 @@ export default function MessagesScreen({ navigation }) {
       const { user, error: authError } = await getCurrentUser();
 
       if (authError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per mesazhe.');
+        Alert.alert('Error', 'You must be logged in to view messages.');
         navigation.goBack();
         return;
       }
@@ -36,7 +36,7 @@ export default function MessagesScreen({ navigation }) {
       const { conversations: loadedConversations, error, unavailable } = await loadInboxConversations(user.id);
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -126,8 +126,8 @@ export default function MessagesScreen({ navigation }) {
         }
       >
         <Text style={styles.cardTitle}>{item.apartment?.title || 'Apartment chat'}</Text>
-        <Text style={styles.cardCity}>{item.apartment?.city || 'Pa qytet'}</Text>
-        <Text style={styles.cardMeta}>Me: {getOwnerDisplayName(otherProfile, 'User')}</Text>
+        <Text style={styles.cardCity}>{item.apartment?.city || 'No city'}</Text>
+        <Text style={styles.cardMeta}>With: {getOwnerDisplayName(otherProfile, 'User')}</Text>
         <Text style={styles.cardTime}>
           {item.updated_at ? new Date(item.updated_at).toLocaleString() : 'No date'}
         </Text>
@@ -142,7 +142,7 @@ export default function MessagesScreen({ navigation }) {
           <Text style={styles.backChipText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Messages</Text>
-        <Text style={styles.subtitle}>Bisedat aktive mes klientave dhe owner-ave.</Text>
+        <Text style={styles.subtitle}>Active conversations between clients and owners.</Text>
       </View>
 
       {loading ? (
@@ -157,7 +157,7 @@ export default function MessagesScreen({ navigation }) {
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No messages yet</Text>
-          <Text style={styles.emptyText}>Bisedat shfaqen ketu pasi klienti hap chat nga detajet e baneses.</Text>
+          <Text style={styles.emptyText}>Conversations appear here after a client opens chat from the apartment details.</Text>
         </View>
       )}
     </SafeAreaView>

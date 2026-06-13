@@ -69,7 +69,7 @@ export default function OwnerHomeScreen({ navigation }) {
   }, []);
 
   const handleDelete = (apartmentId) => {
-    Alert.alert('Delete', 'A je i sigurt qe do ta fshish kete banese?', [
+    Alert.alert('Delete', 'Are you sure you want to delete this apartment?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -178,7 +178,7 @@ export default function OwnerHomeScreen({ navigation }) {
   }, [loadNewBookings, loadUnreadMessages]);
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -189,7 +189,7 @@ export default function OwnerHomeScreen({ navigation }) {
             const { error } = await logoutUser();
 
             if (error) {
-              Alert.alert('Gabim', error.message);
+              Alert.alert('Error', error.message);
               return;
             }
 
@@ -219,7 +219,7 @@ export default function OwnerHomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>
-          Shto banesa, pershkrime dhe menaxho listing-et e tua me nje pamje me premium.
+          Add apartments, write descriptions, and manage your listings in a more premium view.
         </Text>
 
         <View style={styles.aiSummary}>
@@ -228,7 +228,7 @@ export default function OwnerHomeScreen({ navigation }) {
             <Text style={styles.aiSummaryValue}>{portfolioSummary.averageScore || '-'}</Text>
           </View>
           <View style={styles.aiSummaryItem}>
-            <Text style={styles.aiSummaryLabel}>Per permiresim</Text>
+            <Text style={styles.aiSummaryLabel}>Needs improvement</Text>
             <Text style={styles.aiSummaryValue}>{portfolioSummary.weakListings.length}</Text>
           </View>
         </View>
@@ -283,7 +283,7 @@ export default function OwnerHomeScreen({ navigation }) {
           <View style={styles.emptyState}>
             {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>No apartments yet</Text>}
             <Text style={styles.emptyText}>
-              {loading ? 'Po ngarkohen listing-et...' : 'Shto banesen tende te pare nga butoni me siper.'}
+              {loading ? 'Loading listings...' : 'Add your first apartment from the button above.'}
             </Text>
           </View>
         }
@@ -305,7 +305,7 @@ export default function OwnerHomeScreen({ navigation }) {
                   <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)} / month</Text>
                 </View>
               </View>
-              <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
+              <Text style={styles.cardDesc}>{item.description || 'No description.'}</Text>
               <Text style={styles.cardMeta}>{item.rooms} rooms | Per month</Text>
               <View style={[
                 styles.qualityBox,
@@ -322,7 +322,7 @@ export default function OwnerHomeScreen({ navigation }) {
                 <Text style={styles.qualitySuggestion}>{qualityReport.suggestions[0]}</Text>
                 {qualityReport.marketMedianPrice && qualityReport.comparableCount >= 2 ? (
                   <Text style={styles.marketText}>
-                    Market median: {formatPrice(qualityReport.marketMedianPrice, item.currency)} nga {qualityReport.comparableCount} listing-e
+                    Market median: {formatPrice(qualityReport.marketMedianPrice, item.currency)} from {qualityReport.comparableCount} listings
                   </Text>
                 ) : null}
               </View>

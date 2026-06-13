@@ -6,13 +6,13 @@ export const openWhatsAppForPhone = async (phone) => {
   const whatsappNumber = digitsOnly.startsWith('0') ? `383${digitsOnly.slice(1)}` : digitsOnly;
 
   if (!whatsappNumber) {
-    Alert.alert('Gabim', 'Ky numer telefoni nuk eshte i disponueshem.');
+    Alert.alert('Error', 'This phone number is not available.');
     return;
   }
 
   try {
     await Linking.openURL(`https://wa.me/${whatsappNumber}`);
   } catch {
-    Alert.alert('Gabim', 'WhatsApp nuk mund te hapet per kete numer.');
+    Alert.alert('Error', 'WhatsApp cannot be opened for this number.');
   }
 };

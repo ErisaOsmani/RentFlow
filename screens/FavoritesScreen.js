@@ -26,7 +26,7 @@ export default function FavoritesScreen({ navigation }) {
       const { user, error: userError } = await getCurrentUser();
 
       if (userError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per favorites.');
+        Alert.alert('Error', 'You must be logged in to use favorites.');
         navigation.goBack();
         return;
       }
@@ -34,7 +34,7 @@ export default function FavoritesScreen({ navigation }) {
       const { favoriteApartmentIds, error, unavailable } = await loadFavoriteApartmentIds(user.id);
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -56,7 +56,7 @@ export default function FavoritesScreen({ navigation }) {
         }
 
         if (result.error) {
-          Alert.alert('Gabim', result.error.message);
+          Alert.alert('Error', result.error.message);
           return;
         }
 
@@ -89,7 +89,7 @@ export default function FavoritesScreen({ navigation }) {
           <Text style={styles.priceText}>{formatPrice(item.price, item.currency)} / month</Text>
         </View>
         <View style={styles.cityBadge}>
-          <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+          <Text style={styles.cardCity}>{item.city || 'No city'}</Text>
         </View>
         <Text style={styles.cardMeta}>{item.rooms || 0} rooms</Text>
         <View style={styles.amenitiesRow}>
@@ -122,7 +122,7 @@ export default function FavoritesScreen({ navigation }) {
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No favorites yet</Text>
-          <Text style={styles.emptyText}>Ruaj banesat qe te pelqejne nga faqja e detajeve.</Text>
+          <Text style={styles.emptyText}>Save apartments you like from the details page.</Text>
         </View>
       )}
     </SafeAreaView>

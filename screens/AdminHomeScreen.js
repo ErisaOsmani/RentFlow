@@ -21,8 +21,8 @@ import { setProfileVerification } from '../services/sprintTwo';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'apartments', label: 'Banesa' },
-  { key: 'bookings', label: 'Rezervime' },
+  { key: 'apartments', label: 'Apartments' },
+  { key: 'bookings', label: 'Bookings' },
   { key: 'users', label: 'Users' },
 ];
 
@@ -47,7 +47,7 @@ export default function AdminHomeScreen({ navigation }) {
       const userId = authData?.user?.id;
 
       if (authError || !userId) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur si admin.');
+        Alert.alert('Error', 'You must be logged in as an admin.');
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         return;
       }
@@ -69,7 +69,7 @@ export default function AdminHomeScreen({ navigation }) {
         }
 
         if (error) {
-          Alert.alert('Gabim', error.message);
+          Alert.alert('Error', error.message);
           return;
         }
 
@@ -80,7 +80,7 @@ export default function AdminHomeScreen({ navigation }) {
       const profile = usersData.find((user) => user.id === userId);
 
       if (profile?.role !== 'admin') {
-        Alert.alert('Gabim', 'Nuk ke qasje ne panelin e adminit.');
+        Alert.alert('Error', 'You do not have access to the admin panel.');
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         return;
       }
@@ -106,7 +106,7 @@ export default function AdminHomeScreen({ navigation }) {
       }
 
       if (apartmentError) {
-        Alert.alert('Gabim', apartmentError.message);
+        Alert.alert('Error', apartmentError.message);
         return;
       }
 
@@ -130,7 +130,7 @@ export default function AdminHomeScreen({ navigation }) {
         }
 
         if (error) {
-          Alert.alert('Gabim', error.message);
+          Alert.alert('Error', error.message);
           return;
         }
 
@@ -196,7 +196,7 @@ export default function AdminHomeScreen({ navigation }) {
 
   const cityStats = useMemo(() => {
     const cityMap = apartments.reduce((acc, apartment) => {
-      const city = apartment.city || 'Pa qytet';
+      const city = apartment.city || 'No city';
 
       if (!acc[city]) {
         acc[city] = {
@@ -214,7 +214,7 @@ export default function AdminHomeScreen({ navigation }) {
     }, {});
 
     bookings.forEach((booking) => {
-      const city = booking.apartment?.city || 'Pa qytet';
+      const city = booking.apartment?.city || 'No city';
 
       if (!cityMap[city]) {
         cityMap[city] = {
@@ -284,7 +284,7 @@ export default function AdminHomeScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'A je i sigurt qe do te dalesh?', [
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -295,7 +295,7 @@ export default function AdminHomeScreen({ navigation }) {
             const { error } = await logoutUser();
 
             if (error) {
-              Alert.alert('Gabim', error.message);
+              Alert.alert('Error', error.message);
               return;
             }
 
@@ -309,7 +309,7 @@ export default function AdminHomeScreen({ navigation }) {
   };
 
   const handleDeleteApartment = (apartmentId) => {
-    Alert.alert('Delete', 'A je i sigurt qe do ta fshish kete banese?', [
+    Alert.alert('Delete', 'Are you sure you want to delete this apartment?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -318,7 +318,7 @@ export default function AdminHomeScreen({ navigation }) {
           const { error } = await supabase.from('apartments').delete().eq('id', apartmentId);
 
           if (error) {
-            Alert.alert('Gabim', error.message);
+            Alert.alert('Error', error.message);
             return;
           }
 
@@ -329,7 +329,7 @@ export default function AdminHomeScreen({ navigation }) {
   };
 
   const handleDeleteBooking = (bookingId) => {
-    Alert.alert('Delete', 'A je i sigurt qe do ta fshish kete rezervim?', [
+    Alert.alert('Delete', 'Are you sure you want to delete this booking?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -338,7 +338,7 @@ export default function AdminHomeScreen({ navigation }) {
           const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
 
           if (error) {
-            Alert.alert('Gabim', error.message);
+            Alert.alert('Error', error.message);
             return;
           }
 
@@ -350,11 +350,11 @@ export default function AdminHomeScreen({ navigation }) {
 
   const handleChangeRole = (user, role) => {
     if (user.id === currentAdminId && role !== 'admin') {
-      Alert.alert('Gabim', 'Nuk mund ta heqesh rolin admin nga llogaria jote.');
+      Alert.alert('Error', 'You cannot remove the admin role from your own account.');
       return;
     }
 
-    Alert.alert('Ndrysho rolin', `Ta besh ${getUserName(user)} si ${role}?`, [
+    Alert.alert('Change role', `Change ${getUserName(user)} to ${role}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Save',
@@ -362,7 +362,7 @@ export default function AdminHomeScreen({ navigation }) {
           const { error } = await supabase.from('users').update({ role }).eq('id', user.id);
 
           if (error) {
-            Alert.alert('Gabim', error.message);
+            Alert.alert('Error', error.message);
             return;
           }
 
@@ -376,7 +376,7 @@ export default function AdminHomeScreen({ navigation }) {
     const { error } = await setProfileVerification({ userId: user.id, verified });
 
     if (error) {
-      Alert.alert('Gabim', error.message);
+      Alert.alert('Error', error.message);
       return;
     }
 
@@ -392,17 +392,17 @@ export default function AdminHomeScreen({ navigation }) {
       <View style={styles.cardTop}>
         <View style={styles.cardTextWrap}>
           <Text style={styles.cardTitle}>{item.city}</Text>
-          <Text style={styles.cardCity}>{item.apartments} banesa aktive</Text>
+          <Text style={styles.cardCity}>{item.apartments} active apartments</Text>
         </View>
         <View style={styles.priceBadge}>
           <Text style={styles.priceBadgeText}>{item.bookings} bookings</Text>
         </View>
       </View>
-      <Text style={styles.metaText}>Qira totale mujore: {formatPrice(item.totalRent)}</Text>
+      <Text style={styles.metaText}>Total monthly rent: {formatPrice(item.totalRent)}</Text>
       {expandedId === `city-${item.city}` ? (
         <View style={styles.detailsPanel}>
-          <Text style={styles.detailLine}>Mesatarja e qirase: {formatPrice(item.apartments ? Math.round(item.totalRent / item.apartments) : 0)}</Text>
-          <Text style={styles.detailLine}>Pjesa e rezervimeve: {bookings.length ? Math.round((item.bookings / bookings.length) * 100) : 0}%</Text>
+          <Text style={styles.detailLine}>Average rent: {formatPrice(item.apartments ? Math.round(item.totalRent / item.apartments) : 0)}</Text>
+          <Text style={styles.detailLine}>Booking share: {bookings.length ? Math.round((item.bookings / bookings.length) * 100) : 0}%</Text>
           <TouchableOpacity
             style={styles.secondaryButtonFull}
             onPress={() => {
@@ -410,11 +410,11 @@ export default function AdminHomeScreen({ navigation }) {
               switchTab('apartments');
             }}
           >
-            <Text style={styles.secondaryButtonText}>Hap banesat e qytetit</Text>
+            <Text style={styles.secondaryButtonText}>Open city apartments</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <Text style={styles.openHint}>Tap per me shume</Text>
+        <Text style={styles.openHint}>Tap for more</Text>
       )}
     </TouchableOpacity>
   );
@@ -432,8 +432,8 @@ export default function AdminHomeScreen({ navigation }) {
         {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.cardImage} /> : null}
         <View style={styles.cardTop}>
           <View style={styles.cardTextWrap}>
-            <Text style={styles.cardTitle}>{item.title || 'Pa titull'}</Text>
-            <Text style={styles.cardCity}>{item.city || 'Pa qytet'}</Text>
+            <Text style={styles.cardTitle}>{item.title || 'No title'}</Text>
+            <Text style={styles.cardCity}>{item.city || 'No city'}</Text>
           </View>
           <View style={styles.priceBadge}>
             <Text style={styles.priceBadgeText}>{formatPrice(item.price, item.currency)}</Text>
@@ -445,10 +445,8 @@ export default function AdminHomeScreen({ navigation }) {
         <Text style={styles.metaText}>{item.rooms || 0} rooms | Per month</Text>
         {isExpanded ? (
           <View style={styles.detailsPanel}>
-            <Text style={styles.cardDesc}>{item.description || 'Pa pershkrim.'}</Text>
-            <Text style={styles.detailLine}>Apartment ID: {item.id}</Text>
-            <Text style={styles.detailLine}>Owner phone: {item.owner_phone || item.owner?.phone || 'Nuk ka numer'}</Text>
-            <Text style={styles.detailLine}>Owner ID: {item.owner_id || 'N/A'}</Text>
+            <Text style={styles.cardDesc}>{item.description || 'No description.'}</Text>
+            <Text style={styles.detailLine}>Owner phone: {item.owner_phone || item.owner?.phone || 'No phone number'}</Text>
             <View style={styles.actionsRow}>
               <TouchableOpacity
                 style={styles.secondaryButton}
@@ -468,7 +466,7 @@ export default function AdminHomeScreen({ navigation }) {
             </View>
           </View>
         ) : (
-          <Text style={styles.openHint}>Tap per detaje</Text>
+          <Text style={styles.openHint}>Tap for details</Text>
         )}
       </TouchableOpacity>
     );
@@ -499,17 +497,13 @@ export default function AdminHomeScreen({ navigation }) {
         {isExpanded ? (
           <View style={styles.detailsPanel}>
             <Text style={styles.detailLine}>Owner: {getUserName(item.owner, item.owner_id || 'Unknown owner')}</Text>
-            <Text style={styles.detailLine}>Owner ID: {item.owner_id || item.apartment?.owner_id || 'N/A'}</Text>
-            <Text style={styles.detailLine}>Booking ID: {item.id}</Text>
-            <Text style={styles.detailLine}>Apartment ID: {item.apartment_id || item.apartment?.id || 'N/A'}</Text>
-            <Text style={styles.detailLine}>Guest ID: {item.user_id || 'N/A'}</Text>
             <TouchableOpacity
               style={styles.secondaryButtonFull}
               onPress={() => openWhatsAppForPhone(guestPhone)}
               disabled={!guestPhone}
             >
               <Text style={[styles.secondaryButtonText, !guestPhone && styles.disabledText]}>
-                WhatsApp: {guestPhone || 'Nuk ka numer'}
+                WhatsApp: {guestPhone || 'No phone number'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.fullDeleteButton} onPress={() => handleDeleteBooking(item.id)}>
@@ -517,7 +511,7 @@ export default function AdminHomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          <Text style={styles.openHint}>Tap per detaje</Text>
+          <Text style={styles.openHint}>Tap for details</Text>
         )}
       </TouchableOpacity>
     );
@@ -543,14 +537,13 @@ export default function AdminHomeScreen({ navigation }) {
         </View>
         {isExpanded ? (
           <View style={styles.detailsPanel}>
-            <Text style={styles.detailLine}>Phone: {item.phone || 'Nuk ka numer'}</Text>
+            <Text style={styles.detailLine}>Phone: {item.phone || 'No phone number'}</Text>
             <Text style={styles.detailLine}>Verification: {getProfileVerificationLabel(item)}</Text>
-            <Text style={styles.detailLine}>User ID: {item.id}</Text>
             <Text style={styles.detailLine}>
-              Banesa: {apartments.filter((apartment) => apartment.owner_id === item.id).length}
+              Apartments: {apartments.filter((apartment) => apartment.owner_id === item.id).length}
             </Text>
             <Text style={styles.detailLine}>
-              Rezervime: {bookings.filter((booking) => booking.user_id === item.id).length}
+              Bookings: {bookings.filter((booking) => booking.user_id === item.id).length}
             </Text>
             <View style={styles.roleActions}>
               {ROLES.map((role) => (
@@ -585,7 +578,7 @@ export default function AdminHomeScreen({ navigation }) {
             </View>
           </View>
         ) : (
-          <Text style={styles.openHint}>Tap per role dhe statistika</Text>
+          <Text style={styles.openHint}>Tap for roles and stats</Text>
         )}
       </TouchableOpacity>
     );
@@ -624,18 +617,18 @@ export default function AdminHomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>
-          Menaxho banesa, rezervime, qytete dhe rolet e perdoruesve.
+          Manage apartments, bookings, cities, and user roles.
         </Text>
       </View>
 
       <View style={styles.statsGrid}>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>{apartments.length}</Text>
-          <Text style={styles.statLabel}>Banesa</Text>
+          <Text style={styles.statLabel}>Apartments</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>{bookings.length}</Text>
-          <Text style={styles.statLabel}>Rezervime</Text>
+          <Text style={styles.statLabel}>Bookings</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>{users.length}</Text>
@@ -643,7 +636,7 @@ export default function AdminHomeScreen({ navigation }) {
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>{formatPrice(stats.monthlyRent)}</Text>
-          <Text style={styles.statLabel}>Qira/muaj</Text>
+          <Text style={styles.statLabel}>Rent/month</Text>
         </View>
       </View>
 
@@ -670,19 +663,19 @@ export default function AdminHomeScreen({ navigation }) {
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Kerko sipas emrit, qytetit, datave..."
+        placeholder="Search by name, city, dates..."
         placeholderTextColor="#8F97A8"
         style={styles.searchInput}
       />
 
       <Text style={styles.sectionTitle}>
         {activeTab === 'overview'
-          ? 'Qytetet'
+          ? 'Cities'
           : activeTab === 'apartments'
-            ? 'Te gjitha banesat'
+            ? 'All apartments'
             : activeTab === 'bookings'
-              ? 'Te gjitha rezervimet'
-              : 'Perdoruesit'}
+              ? 'All bookings'
+              : 'Users'}
       </Text>
     </>
   );
@@ -699,9 +692,9 @@ export default function AdminHomeScreen({ navigation }) {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>Nuk ka te dhena</Text>}
+            {loading ? <ActivityIndicator color="#14213D" /> : <Text style={styles.emptyTitle}>No data found</Text>}
             <Text style={styles.emptyText}>
-              {loading ? 'Po ngarkohen te dhenat...' : 'Provo me kerkim tjeter ose nderro tab.'}
+              {loading ? 'Loading data...' : 'Try another search or switch tabs.'}
             </Text>
           </View>
         }

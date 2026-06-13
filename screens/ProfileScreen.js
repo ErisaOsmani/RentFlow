@@ -29,7 +29,7 @@ export default function ProfileScreen({ navigation }) {
       const { user, error: authError } = await getCurrentUser();
 
       if (authError || !user) {
-        Alert.alert('Gabim', 'Duhet te jesh i kycur per profil.');
+        Alert.alert('Error', 'You must be logged in to view your profile.');
         navigation.goBack();
         return;
       }
@@ -37,7 +37,7 @@ export default function ProfileScreen({ navigation }) {
       const { profile: loadedProfile, error } = await loadUserProfile(user.id);
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
@@ -60,7 +60,7 @@ export default function ProfileScreen({ navigation }) {
     }
 
     if (!firstName.trim() || !lastName.trim() || !phone.trim()) {
-      Alert.alert('Gabim', 'Ploteso emrin, mbiemrin dhe telefonin.');
+      Alert.alert('Error', 'Fill in your first name, last name, and phone number.');
       return;
     }
 
@@ -74,11 +74,11 @@ export default function ProfileScreen({ navigation }) {
       });
 
       if (error) {
-        Alert.alert('Gabim', error.message);
+        Alert.alert('Error', error.message);
         return;
       }
 
-      Alert.alert('Success', 'Profili u dergua per verifikim.');
+      Alert.alert('Success', 'Your profile was sent for verification.');
       loadProfile();
     } finally {
       setSaving(false);
@@ -89,7 +89,7 @@ export default function ProfileScreen({ navigation }) {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      Alert.alert('Gabim', error.message);
+      Alert.alert('Error', error.message);
       return;
     }
 
@@ -113,7 +113,7 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={styles.eyebrow}>TRUST PROFILE</Text>
           <Text style={styles.title}>My profile</Text>
-          <Text style={styles.subtitle}>Mbaj te dhenat e sakta qe owner-at dhe klientat te kene me shume besim.</Text>
+          <Text style={styles.subtitle}>Keep your information accurate so owners and clients can trust each other more.</Text>
         </View>
 
         <View style={styles.statusPanel}>
@@ -123,8 +123,8 @@ export default function ProfileScreen({ navigation }) {
         </Text>
         <Text style={styles.statusText}>
           {profile?.verified
-            ? 'Profili yt eshte i verifikuar.'
-            : 'Ruaj te dhenat e plota; admini mund ta aprovoje profilin.'}
+            ? 'Your profile is verified.'
+            : 'Save complete details; an admin can approve your profile.'}
         </Text>
         </View>
 

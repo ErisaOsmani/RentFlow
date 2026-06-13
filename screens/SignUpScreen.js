@@ -42,22 +42,22 @@ export default function SignUpScreen({ navigation }) {
       !normalizedPassword ||
       !confirmPassword.trim()
     ) {
-      Alert.alert('Gabim', 'Ploteso te gjitha fushat.');
+      Alert.alert('Error', 'Fill in all fields.');
       return;
     }
 
     if (!isValidEmail(normalizedEmail)) {
-      Alert.alert('Gabim', 'Shkruaj nje email valid.');
+      Alert.alert('Error', 'Enter a valid email address.');
       return;
     }
 
     if (normalizedPassword.length < 6) {
-      Alert.alert('Gabim', 'Password duhet te kete te pakten 6 karaktere.');
+      Alert.alert('Error', 'Password must be at least 6 characters.');
       return;
     }
 
     if (normalizedPassword !== confirmPassword.trim()) {
-      Alert.alert('Gabim', 'Passwords do not match.');
+      Alert.alert('Error', 'Passwords do not match.');
       return;
     }
 
@@ -77,7 +77,7 @@ export default function SignUpScreen({ navigation }) {
       const user = data?.user;
 
       if (!user) {
-        Alert.alert('Error', 'User nuk u krijua. Kontrollo email confirmation.');
+        Alert.alert('Error', 'The user was not created. Check the email confirmation.');
         return;
       }
 
@@ -154,7 +154,7 @@ export default function SignUpScreen({ navigation }) {
             <Text style={styles.eyebrow}>RENTFLOW</Text>
             <Text style={styles.title}>Create your account</Text>
             <Text style={styles.subtitle}>
-              Zgjidh rolin tend dhe hyj ne platforme me nje flow me te paster.
+              Choose your role and join the platform with a cleaner flow.
             </Text>
           </View>
 
