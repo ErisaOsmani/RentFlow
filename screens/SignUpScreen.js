@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { registerForPushNotifications } from '../services/pushNotifications';
 
+const SIGNUP_ROLES = ['client', 'owner'];
+
 // Ky screen krijon llogari te reja dhe ruan rolin/profilin ne Supabase.
 export default function SignUpScreen({ navigation }) {
   // State-et ruajne fushat e formes se regjistrimit.
@@ -67,6 +69,7 @@ export default function SignUpScreen({ navigation }) {
 
     try {
       setLoading(true);
+      const signupRole = SIGNUP_ROLES.includes(role) ? role : 'client';
 
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
@@ -90,7 +93,7 @@ export default function SignUpScreen({ navigation }) {
         {
           id: user.id,
           email: normalizedEmail,
-          role,
+          role: signupRole,
           first_name: normalizedFirstName,
           last_name: normalizedLastName,
           phone: normalizedPhone,
@@ -100,14 +103,14 @@ export default function SignUpScreen({ navigation }) {
         {
           id: user.id,
           email: normalizedEmail,
-          role,
+          role: signupRole,
           first_name: normalizedFirstName,
           last_name: normalizedLastName,
         },
         {
           id: user.id,
           email: normalizedEmail,
-          role,
+          role: signupRole,
         },
       ];
 
@@ -159,7 +162,7 @@ export default function SignUpScreen({ navigation }) {
             <Text style={styles.eyebrow}>RENTFLOW</Text>
             <Text style={styles.title}>Create your account</Text>
             <Text style={styles.subtitle}>
-              Choose your role and join the platform with a cleaner flow.
+              Choose your account type and join the platform with a cleaner flow.
             </Text>
           </View>
 
@@ -232,12 +235,6 @@ export default function SignUpScreen({ navigation }) {
                 <Text style={[styles.roleText, role === 'owner' && styles.roleTextActive]}>Owner</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.rolePill, role === 'admin' && styles.rolePillActive]}
-                onPress={() => setRole('admin')}
-              >
-                <Text style={[styles.roleText, role === 'admin' && styles.roleTextActive]}>Admin</Text>
-              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
