@@ -26,7 +26,7 @@ const TABS = [
   { key: 'users', label: 'Users' },
 ];
 
-const ROLES = ['client', 'owner', 'admin'];
+const ASSIGNABLE_ROLES = ['client', 'owner'];
 
 // AdminHomeScreen eshte panel kontrolli per apartamente, bookings dhe perdorues.
 export default function AdminHomeScreen({ navigation }) {
@@ -35,7 +35,6 @@ export default function AdminHomeScreen({ navigation }) {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
-  const [currentAdminId, setCurrentAdminId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -54,8 +53,6 @@ export default function AdminHomeScreen({ navigation }) {
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         return;
       }
-
-      setCurrentAdminId(userId);
 
       // Select-e alternative qe paneli te punoje edhe kur disa kolona mungojne.
       const userSelectOptions = USER_PROFILE_SELECT_FULL;
@@ -364,10 +361,15 @@ export default function AdminHomeScreen({ navigation }) {
     ]);
   };
 
-  // Ndryshon rolin e user-it, por mbron adminin aktual nga heqja e rolit te vet.
+  // Ndryshon rolin e user-it, por nuk lejon krijimin ose heqjen e adminit ekzistues nga app-i.
   const handleChangeRole = (user, role) => {
-    if (user.id === currentAdminId && role !== 'admin') {
-      Alert.alert('Error', 'You cannot remove the admin role from your own account.');
+    if (role === 'admin') {
+      Alert.alert('Error', 'Admin access is locked to the existing admin account.');
+      return;
+    }
+
+    if (user.role === 'admin') {
+      Alert.alert('Error', 'The existing admin role cannot be changed from the app.');
       return;
     }
 
@@ -568,7 +570,7 @@ export default function AdminHomeScreen({ navigation }) {
               Bookings: {bookings.filter((booking) => booking.user_id === item.id).length}
             </Text>
             <View style={styles.roleActions}>
-              {ROLES.map((role) => (
+              {ASSIGNABLE_ROLES.map((role) => (
                 <TouchableOpacity
                   key={role}
                   style={[styles.roleButton, item.role === role && styles.roleButtonActive]}
