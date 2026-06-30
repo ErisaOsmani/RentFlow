@@ -4,7 +4,10 @@
     "slug": "RentFlow",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -21,7 +24,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.floresasherifi.RentFlow"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8ab4262c-1f9a-48e9-8f68-85de4e66bfa5"
+      }
     }
   }
 }
